@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ bot_name }} Agent Bot</title>
+    <!-- Materialize CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            height: 100vh; /* Full viewport height */
+        }
+
+        strong {
+            font-weight: bolder;
+        }
+
+        .center-content {
+            display: flex;
+            align-items: center; /* Vertically align items */
+            justify-content: center; /* Horizontally align items */
+        }
+
+        .center-content img {
+            margin-right: 10px; /* Space between the image and heading */
+            max-width: 50px; /* Limit the size of the image */
+            height: auto; /* Maintain aspect ratio */
+        }
+
+        .center-content h1 {
+            font-size: 2rem; /* Adjust the size of the heading */
+            margin: 0;
+        }
+
+        #sendButton:disabled .button-text {
+            display: none;
+        }
+
+        .spinner {
+            width: 25px;
+            height: 25px;
+            border: 2px solid rgba(0, 0, 0, 0.2); /* Light border */
+            border-top-color: white; /* Material Design blue */
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* Center spinner on the page (optional) */
+        .spinner-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* Add custom styles if necessary */
+        .container {
+            padding-top: 20px;
+            max-width: 800px;
+            display: grid;
+            grid-template-rows: auto 1fr auto;
+            height: 100%;
+        }
+        .panel {
+            margin-top: 20px;
+            padding: 20px;
+            background-color: #f4f4f4;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            overflow-y: auto; /* Enable scrolling for overflow */
+        }
+        h1 {
+            text-align: center;
+            color: #2bbbad;
+            margin-bottom: 20px;
+        }
+        #responseContent h1 {
+            text-align: left;
+            font-size: 1.64rem;
+        }
+        #responseContent h2, #responseContent h3, #responseContent h4 {
+            text-align: left;
+            font-size: 1.64rem;
+        }
+        #responseContent img {
+            width: 25px;
+            float: left;
+            margin-right: 5px;
+            border-radius: 40px;
+            border: 1px solid #2bbbad;
+        }
+        .message {
+            background: white;
+            border-radius: 15px;
+            padding: 15px;
+            margin: 15px 0;
+            overflow-x: auto;
+        }
+
+        .view-response {
+            position: relative;
+            color: #6200ea;
+            text-decoration: none;
+            font-weight: 500;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+
+        .response-text {
+            border: 1px solid;
+            margin: 0;
+            padding: 10px;
+            border-radius: 10px;
+        }
+
+        .copy-btn {
+            margin: 0 0 8px;
+            background-color: #6200ea;
+            color: #ffffff;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        .copy-btn:hover {
+            background-color: #3700b3;
+        }
+
+        .copied-message {
+            display: none;
+            margin-left: 8px;
+            color: #388e3c; /* Material Design green */
+            font-size: 14px;
+            align-items: center;
+        }
+
+        .copied-message svg {
+            margin-left: 4px;
+            fill: #388e3c;
+            width: 16px;
+            height: 16px;
+        }
+
+        #updateLink {
+            height: 40px;
+        }
+
+        .human-message {
+            display: flex;
+            align-items: flex-end;
+            flex-direction: column;
+        }
+
+        .human-message .message {
+            max-width: 500px;
+        }
+
+        .row {
+            margin-top: 20px;
+        }
+
+        .input-area-container {
+            display: flex;
+            align-items: center;
+            background-color: #fff;
+            border-top: 1px solid #ddd;
+            padding: 10px;
+        }
+
+        .input-area {
+            width: 800px;
+        }
+
+        .collapsible-content {
+            overflow: hidden;
+            transition: height 0.3s ease-out;
+            height: 0;
+        }
+
+        .collapsible-content.expanded {
+            height: auto;
+        }
+
+        .view-more-btn {
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            color: #4CAF50;
+            margin-top: 10px;
+            font-size: 16px;
+            user-select: none;
+        }
+
+        .view-more-btn .material-icons {
+            font-size: 20px;
+            margin-left: 5px;
+        }
+
+        .modal {
+            border-radius: 8px;
+            z-index: 1;
+            top: 200px;
+        }
+        .modal-content {
+            text-align: center;
+        }
+        .modal-content .material-icons {
+            font-size: 48px;
+            color: #d32f2f;
+            margin-bottom: 10px;
+        }
+        .modal-footer {
+            text-align: center;
+        }
+        .modal-footer .btn {
+            width: 100px;
+        }
+        #errorMessage {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <div class="center-content">
+            <img src="resources/img/bot_avatar.png" alt="{{ bot_name }} Agent Bot">
+            <h1>{{ bot_name }} Agent Bot</h1>
+        </div>
+
+        <div class="row">
+            <div class="col s4">
+                <!-- Select Box -->
+                <select id="mode" class="browser-default">
+                    <option value="react-agent" selected>ReAct Agent Mode</option>
+                    <option value="plex-agent">Plan-Execute Agent Mode</option>
+                    <option value="rag">RAG Mode</option>
+                </select>
+            </div>
+            <div class="col s8">
+                <div class="right-align">
+                    Welcome <span id="userMessage" class="blue-text"></span>
+                    <a id="updateLink" class="waves-effect waves-light btn-flat blue-text text-darken-2" href="/register">
+                        <i class="material-icons left">edit</i>Update Username
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Panel to Display the Bot Response -->
+    <div id="responsePanel" class="panel">
+        <div id="responseContent">
+        </div>
+    </div>
+
+    <!-- Select Box and Button on the Same Row -->
+    <div class="input-area-container">
+        <div class="row input-area">
+            <div class="col s8">
+                <!-- Text Area for Prompt -->
+                <div class="input-field">
+                    <textarea id="prompt" class="materialize-textarea" onkeydown="handleKeyPress(event)"></textarea>
+                    <label for="prompt">Enter your prompt</label>
+                </div>
+            </div>
+            <div class="col s4">
+                <!-- Send Button -->
+                <button id="sendButton" class="btn waves-effect waves-light right">
+                    <span class="button-text">Send</span>
+                    <div id="spinner-area">
+                        <div class="spinner-container">
+                            <div class="spinner"></div>
+                            Hanging tight...
+                        </div>
+                    </div>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Error Box -->
+<div id="errorModal" class="modal">
+    <div class="modal-content">
+        <i class="material-icons">error_outline</i>
+        <div id="errorMessage">
+
+        </div>
+    </div>
+    <div class="modal-footer">
+        <button class="btn red lighten-1 modal-close">OK</button>
+    </div>
+</div>
+
+<!-- Materialize JS -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+<script>
+    const panel = document.getElementById("responsePanel");
+    const prompt = document.getElementById('prompt');
+
+    const existingUser = localStorage.getItem('user');
+
+    const thread = `${existingUser}/${checkHashParam()}`;
+    console.log('thread id: ', thread);
+
+    const dbName = "conversations";
+    let db;
+
+    // Open or create an IndexedDB database
+    const request = indexedDB.open(dbName, 1);
+
+    request.onupgradeneeded = (event) => {
+        const db = event.target.result;
+        if (!db.objectStoreNames.contains("messages")) {
+            db.createObjectStore("messages");
+        }
+    };
+
+    request.onsuccess = (event) => {
+        db = event.target.result;
+        console.log("Database opened successfully");
+
+        const transaction = db.transaction("messages", "readonly");
+        const store = transaction.objectStore("messages");
+
+        const request = store.get(thread);
+
+        request.onsuccess = (event) => {
+            const message = event.target.result;
+            if (message) {
+                const responseText = document.getElementById('responseContent');
+                responseText.innerHTML = message;
+                panel.scrollTop = panel.scrollHeight;
+            }
+        };
+
+        request.onerror = (event) => {
+            console.error("Error retrieving data:", event.target.error);
+        };
+    };
+
+    request.onerror = (event) => {
+        console.error("Error opening database:", event.target.error);
+    };
+
+    function generateUUID() {
+        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+            var r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
+            return v.toString(16);
+        });
+    }
+
+    function toggleChainOfThought(button) {
+        const content = button.previousElementSibling;
+        const isExpanded = content.classList.contains('expanded');
+        content.classList.toggle('expanded');
+        if (isExpanded) {
+            button.innerHTML = 'View chain-of-thought <span class="material-icons">expand_more</span>';
+        } else {
+            button.innerHTML = 'Hide chain-of-thought <span class="material-icons">expand_less</span>';
+        }
+    }
+
+    // Check for the 'hash' parameter in the URL
+    function checkHashParam() {
+        // Get the URL query string
+        const urlParams = new URLSearchParams(window.location.search);
+        const hash = urlParams.get('thread');
+
+        // If 'hash' is not in the URL, generate a new UUID and redirect
+        if (hash) {
+            return hash;
+        }
+        const newHash = generateUUID();
+        // Redirect to the same URL with the generated 'hash'
+        window.location.href = window.location.pathname + '?thread=' + newHash;
+    }
+
+    function parseUrl(url) {
+        try {
+            const parsedUrl = new URL(url);
+            return parsedUrl.hostname; // Returns the domain part
+        } catch (error) {
+            console.error("Invalid URL:", error);
+            return null;
+        }
+    }
+
+    function disable(object) {
+        object.setAttribute("disabled", true);
+    }
+
+    function enable(object) {
+        object.removeAttribute("disabled");
+    }
+
+    function copyResponse(button) {
+        const responseText = button.nextSibling.innerText;
+        navigator.clipboard.writeText(responseText).then(() => {
+            const copiedMessage = button.querySelector('.copied-message');
+            copiedMessage.style.display = 'inline-flex';
+            // Hide the message after 2 seconds
+            setTimeout(() => {
+                copiedMessage.style.display = 'none';
+            }, 2000);
+        }).catch(err => {
+            alert("Failed to copy: " + err);
+        });
+    }
+
+    function handleKeyPress(event) {
+        // If Enter is pressed (without Shift), simulate button click
+        if (event.key === 'Enter' && !event.shiftKey) {
+            event.preventDefault(); // Prevent default Enter behavior (e.g., newline)
+            sendInput(); // Trigger send button action
+        }
+        // If Shift+Enter is pressed, allow normal new line behavior
+        else if (event.key === 'Enter' && event.shiftKey) {
+            // Do nothing (allow new line to be added)
+        }
+    }
+
+    function renderMessage(message, markdown) {
+        let avatar = message['type']
+        if (message['type'] === 'ai') {
+            message['type'] = '{{ bot_name }}';
+            avatar = 'bot_avatar'
+        }
+        let content = "";
+        if (message['type'] !== 'human') {
+            content += `<img alt="${message['type']}" src="resources/img/${avatar}.png"/><strong>${message['type']}</strong>`;
+        } else {
+            content += `<img alt="${message['type']}" src="resources/img/${avatar}.png"/><strong>${existingUser}</strong>`;
+        }
+        if (message['type'] !== 'tool' && message['data']['content']) {
+            if (markdown) {
+                content += `<p>${marked.marked(message['data']['content'])}</p>`;
+            } else {
+                content += `<p>${message['data']['content']}</p>`;
+            }
+        }
+        if (message['data']['tool_calls'] != null) {
+            let tool_calls = "";
+            message['data']['tool_calls'].forEach((tool_call) => {
+                tool_calls += `\n- Will invoke "${tool_call['name']}" with arguments "${JSON.stringify(tool_call['args'])}"`;
+            });
+            content += `<div><div class="view-response">
+                    <div class="response-text">${tool_calls}</div>
+                </div></div>`;
+        }
+        if (message['type'] === 'tool') {
+            content += `<p>Invoked "${message['data']['name']}" with status "${message['data']['status']}"</p>`;
+            content += `<div><div class="view-response">
+                    <button class="copy-btn" onclick="copyResponse(this)">Copy<span class="copied-message">Response copied<svg viewBox="0 0 24 24"><path d="M9 16.2l-3.5-3.5 1.4-1.4L9 13.4l7.1-7.1 1.4 1.4z"></path></svg></span></button>
+                    <div class="response-text">${message['data']['content']}</div>
+            </div></div>`;
+        }
+        return `<div class="${message['type']}-message">
+            <div class="message">${content}</div>
+        </div>`;
+    }
+
+    function sendInput() {
+        var message = prompt.value;
+
+        prompt.value = "";
+
+        if (message) {
+            var sendButton = document.getElementById('sendButton');
+            var responseText = document.getElementById('responseContent');
+            var mode = document.getElementById('mode');
+
+            // Disable the button and add loading style
+            sendButton.classList.add("is-loading");
+            disable(sendButton);
+            disable(prompt);
+            disable(mode);
+
+            responseText.innerHTML += renderMessage({
+                'type': 'human',
+                'data': {
+                    'content': message,
+                }
+            }, true);
+
+            panel.scrollTop = panel.scrollHeight;
+
+            // Make the AJAX call to the /rag endpoint
+            fetch(`/${mode.value}?prompt=${encodeURIComponent(message)}&thread_id=${thread}`)
+                .then((response) => {
+                    if (!response.ok) {
+                        return response.text().then(text => Promise.reject(text));
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    let output = marked.marked(data.response.output);
+                    // if (data.response.context != null) {
+                    //     output += "##### Context\n";
+                    //     data.response.context.forEach((context) => {
+                    //         const source = context.metadata.source ?? "external:" + parseUrl(context.metadata.link);
+                    //         output += " - [" + context.metadata.title + "](" + context.metadata.link + ") *(Source: " + source + ")*\n";
+                    //     })
+                    // }
+                    //
+                    // if (data.response.events != null) {
+                    //     output += "##### Events\n";
+                    //     data.response.events.forEach((event) => {
+                    //         if (event['role'] === 'plan') {
+                    //             output += `**Planning**: ${event['plan']}\n\n`;
+                    //         } else if (event['role'] === 'agent') {
+                    //             output += `**Agent - Executed steps**: ${event['past_steps']}\n\n`;
+                    //         } else if (event['role'] === 'replan') {
+                    //             let decision = event['response'] != null ? "Final Answer: " + event['response'] : "Replanning needed: " + event['plan'];
+                    //             output += `**Replanning**: ${decision}\n\n`;
+                    //         }
+                    //     });
+                    // }
+
+                    if (data.response.messages != null && data.response.messages.length > 0) {
+                        let chainOfThoughtOutput = "";
+
+                        data.response.messages.forEach((message) => {
+                            chainOfThoughtOutput += renderMessage(message, true);
+                        });
+                        output += `
+                            <div>
+                                <div class="collapsible-content">
+                                    ${chainOfThoughtOutput}
+                                </div>
+                                <div class="view-more-btn" id="view-more-btn" onclick="toggleChainOfThought(this)">
+                                    View chain-of-thought
+                                    <span class="material-icons">expand_more</span>
+                                </div>
+                            </div>
+                        `;
+                    }
+
+                    responseText.innerHTML += renderMessage({
+                        'type': 'ai',
+                        'data': {
+                            'content': output,
+                        }
+                    }, false);
+
+                    const transaction = db.transaction("messages", "readwrite");
+                    const store = transaction.objectStore("messages");
+                    store.put(responseText.innerHTML, thread);
+                    transaction.oncomplete = () => {
+                        console.log("Data saved to IndexedDB!");
+                    };
+                    transaction.onerror = (event) => {
+                        console.error("Error saving data:", event.target.error);
+                    };
+                })
+                .catch(error => {
+                    console.log(error);
+                    document.getElementById('errorMessage').innerHTML = error;
+                    const errorModalInstance = M.Modal.getInstance(document.getElementById('errorModal'));
+                    errorModalInstance.open();
+                })
+                .finally(() => {
+                    // Re-enable the button and remove loading style
+                    sendButton.classList.remove("is-loading");
+                    enable(sendButton);
+                    enable(prompt);
+                    enable(mode);
+                    prompt.focus();
+
+                    panel.scrollTop = panel.scrollHeight;
+                });
+        }
+    }
+
+    window.onload = function() {
+        prompt.focus();
+        if (existingUser) {
+            userMessage.innerHTML = existingUser;
+        } else {
+            window.location.href = '/register';
+        }
+
+        // Handle the submit button click
+        document.getElementById('sendButton').addEventListener('click', sendInput);
+
+        const modal = document.querySelectorAll('.modal');
+        M.Modal.init(modal, {});
+    }
+</script>
+
+</body>
+</html>

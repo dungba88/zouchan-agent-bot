@@ -1,0 +1,15 @@
+langchain-cohere
+langchain-huggingface
+langchain-ollama
+langchain-openai
+langchain-community
+langchain-core
+langchain-text-splitters
+langgraph
+yt-dlp
+scholarly
+youtube-transcript-api
+pydantic
+Flask
+croniter
+black

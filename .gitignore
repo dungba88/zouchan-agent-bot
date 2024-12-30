@@ -1,0 +1,6 @@
+.idea
+cron/*.cron
+dev
+out
+data/vectorstore
+data/documents.db

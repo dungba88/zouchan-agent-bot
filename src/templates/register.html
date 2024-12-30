@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register</title>
+    <!-- Material Design CSS -->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css" rel="stylesheet">
+    <style>
+        #username {
+            max-width: 300px;
+        }
+    </style>
+</head>
+<body>
+<div class="container center-align">
+    <h2>Register</h2>
+    <p id="registeredMessage"></p>
+    <div class="input-field">
+        <input id="username" type="text" placeholder="Enter your username" autofocus />
+    </div>
+    <button id="registerButton" class="btn waves-effect waves-light" disabled>Register</button>
+</div>
+
+<!-- Materialize JS -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+<script>
+    const usernameInput = document.getElementById('username');
+    const registerButton = document.getElementById('registerButton');
+    const registeredMessage = document.getElementById('registeredMessage');
+
+    // Check if user is already registered
+    const existingUser = localStorage.getItem('user');
+    if (existingUser) {
+        registeredMessage.innerHTML = `You have been registered with username: <b>${existingUser}</b>. You can update your username below.`;
+        usernameInput.value = existingUser;
+        registerButton.disabled = false; // Enable button since input is pre-filled
+    } else {
+        registeredMessage.textContent = `Register before using {{ bot_name}} Agent Bot`;
+    }
+
+    // Focus on the input field
+    usernameInput.focus();
+
+    // Enable/disable the button based on input value
+    usernameInput.addEventListener('input', () => {
+        if (usernameInput.value.trim() !== '') {
+            registerButton.disabled = false;
+        } else {
+            registerButton.disabled = true;
+        }
+    });
+
+    // Handle registration button click
+    registerButton.addEventListener('click', () => {
+        const username = usernameInput.value.trim();
+        if (username) {
+            localStorage.setItem('user', username); // Save username in localStorage
+            window.location.href = '/'; // Redirect to index.html
+        }
+    });
+</script>
+</body>
+</html>
