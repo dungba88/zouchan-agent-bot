@@ -11,19 +11,22 @@ import logging
 
 from llm.agent import ReactAgent, PlanExecuteAgent
 from llm.rag import RagChain
+from llm.tools import TOOLS, ADMIN_TOOLS
 from utils.cronservices import CronService
 
 
 app = Flask(__name__)
 
-react_agent = ReactAgent()
+react_agent = ReactAgent(tools=TOOLS)
 logging.info("Created re-act agent")
-plex_agent = PlanExecuteAgent()
+plex_agent = PlanExecuteAgent(tools=TOOLS)
 logging.info("Created plan-execute agent")
 rag = RagChain()
 logging.info("Created RAG chain")
 
-cron = CronService(react_agent)
+admin_agent = ReactAgent(tools=ADMIN_TOOLS)
+logging.info("Created admin agent")
+cron = CronService(admin_agent)
 cron.run()
 logging.info("Started cron service")
 

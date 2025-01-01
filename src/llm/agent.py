@@ -12,14 +12,12 @@ from langgraph.prebuilt import create_react_agent
 from pydantic import BaseModel, Field
 
 from config import PROMPT_TEMPLATE, MAIN_LLM_MODEL
-from llm.tools import TOOLS, ADMIN_TOOLS
 from llm.utils import create_llm
 
 
 class BaseAgent:
-    def __init__(self):
+    def __init__(self, tools):
         self.llm = create_llm(MAIN_LLM_MODEL)
-        tools = TOOLS + ADMIN_TOOLS
         self.memory = MemorySaver()
         # Initialize the memory for short-term memory (conversation history)
         self.react_agent = create_react_agent(
@@ -32,8 +30,8 @@ class BaseAgent:
 
 class ReactAgent(BaseAgent):
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, tools):
+        super().__init__(tools)
 
     def invoke(self, prompt, thread_id=None):
         if thread_id is None:
@@ -115,8 +113,8 @@ def to_structured_output(llm, schema):
 
 class PlanExecuteAgent(BaseAgent):
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, tools):
+        super().__init__(tools)
         self.planner = self._create_planner()
         self.replanner = self._create_replanner()
         self.graph = self._create_graph()

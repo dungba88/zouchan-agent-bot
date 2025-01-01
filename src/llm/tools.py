@@ -289,7 +289,8 @@ def print_system_config():
         "AGENT_PERSONALITY": AGENT_PERSONALITY,
         "PROMPT_TEMPLATE": PROMPT_TEMPLATE,
         "TAVILY_ENABLED": TAVILY_ENABLED,
-        "TOOLS": [the_tool.name for the_tool in (TOOLS + ADMIN_TOOLS)],
+        "TOOLS": [the_tool.name for the_tool in TOOLS],
+        "ADMIN_TOOLS": [the_tool.name for the_tool in ADMIN_TOOLS],
     }
 
 

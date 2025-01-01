@@ -45,6 +45,7 @@ class CronService:
 
     def run(self):
         for cron in self.crons:
+            logging.info(f"Starting a cron service for cron {cron['name']}")
             thread = threading.Thread(
                 target=self._schedule_task,
                 args=[cron],
