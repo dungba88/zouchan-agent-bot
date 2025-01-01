@@ -604,7 +604,11 @@
         document.getElementById('sendButton').addEventListener('click', sendInput);
 
         const modal = document.querySelectorAll('.modal');
-        M.Modal.init(modal, {});
+        M.Modal.init(modal, {
+            onCloseEnd: function () {
+                document.getElementById('errorMessage').innerHTML = "";
+            },
+        });
     }
 </script>
 
