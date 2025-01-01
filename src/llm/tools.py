@@ -1,7 +1,6 @@
 from urllib.parse import urlparse, parse_qs
 
 import yt_dlp
-from docutils.nodes import description
 from langchain.agents import tool
 from langchain_community.document_loaders import RSSFeedLoader, WebBaseLoader
 from langchain.tools.retriever import create_retriever_tool
@@ -300,7 +299,10 @@ def load_webpage(url: str):
     Summarize a Web page
     """
     documents = WebBaseLoader(url).load()
-    return [{"metadata": doc.metadata, "page_content": summarize_text(doc.page_content)} for doc in documents]
+    return [
+        {"metadata": doc.metadata, "page_content": summarize_text(doc.page_content)}
+        for doc in documents
+    ]
 
 
 query_articles_tool = create_retriever_tool(

@@ -23,7 +23,10 @@ class BaseAgent:
         self.memory = MemorySaver()
         # Initialize the memory for short-term memory (conversation history)
         self.react_agent = create_react_agent(
-            self.llm, tools=tools, checkpointer=self.memory, state_modifier=PROMPT_TEMPLATE
+            self.llm,
+            tools=tools,
+            checkpointer=self.memory,
+            state_modifier=PROMPT_TEMPLATE,
         )
 
 
