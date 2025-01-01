@@ -4,7 +4,7 @@ from langchain.chains.combine_documents import create_stuff_documents_chain
 
 from config import SUB_LLM_MODEL
 from llm.utils import create_llm
-from utils.indexing import INDEXER
+from utils.indexing import get_indexer_instance
 
 
 class RagChain:
@@ -16,7 +16,7 @@ class RagChain:
 
         combine_docs_chain = create_stuff_documents_chain(llm, retrieval_qa_chat_prompt)
         self.rag_chain = create_retrieval_chain(
-            INDEXER.vector_store.as_retriever(), combine_docs_chain
+            get_indexer_instance().vector_store.as_retriever(), combine_docs_chain
         )
 
     def invoke(self, prompt):

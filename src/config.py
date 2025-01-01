@@ -1,17 +1,6 @@
 # Define the SQLite database path
 import os
 
-DATABASE_PATH = "../data/documents.db"
-
-# Define the vector index path
-INDEX_PATH = "../data/vectorstore/documents"
-
-# Define the static resources path
-STATIC_RESOURCES_PATH = "../resources"
-
-# Define the cron directory
-CRON_PATH = "../cron"
-
 # Define the Agent language
 AGENT_LANGUAGE = "Vietnamese"
 
@@ -28,6 +17,7 @@ When responding, use natural and human-friendly language.
 Return the response in expressive markdown format."""
 
 TAVILY_ENABLED = os.environ.get("TAVILY_API_KEY") is not None
+GMAIL_ENABLED = True
 
 # Main LLM model used for decision-making tasks
 MAIN_LLM_MODEL = {
@@ -46,3 +36,14 @@ SUB_LLM_MODEL = {
         "temperature": 0,
     },
 }
+
+DATABASE_PATH = "../data/documents.db"
+
+# Define the vector index path
+INDEX_PATH = "../data/vectorstore/documents"
+
+# Define the static resources path
+STATIC_RESOURCES_PATH = "../resources"
+
+# Define the cron directory
+CRON_PATH = "../cron"

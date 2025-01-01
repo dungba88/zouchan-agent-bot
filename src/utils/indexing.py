@@ -29,4 +29,5 @@ class Indexer:
         self.vector_store.save_local(INDEX_PATH)
 
 
-INDEXER = Indexer()
+def get_indexer_instance():
+    return Indexer()

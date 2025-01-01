@@ -1,6 +1,8 @@
 .idea
-cron/*.cron
+cron/*.json
 dev
 out
 data/vectorstore
 data/documents.db
+src/credentials.json
+token.json

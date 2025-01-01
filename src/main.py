@@ -17,16 +17,14 @@ from utils.cronservices import CronService
 
 app = Flask(__name__)
 
-react_agent = ReactAgent(tools=TOOLS)
+react_agent = ReactAgent(tools=TOOLS + ADMIN_TOOLS)
 logging.info("Created re-act agent")
-plex_agent = PlanExecuteAgent(tools=TOOLS)
+plex_agent = PlanExecuteAgent(tools=TOOLS + ADMIN_TOOLS)
 logging.info("Created plan-execute agent")
 rag = RagChain()
 logging.info("Created RAG chain")
 
-admin_agent = ReactAgent(tools=ADMIN_TOOLS)
-logging.info("Created admin agent")
-cron = CronService(admin_agent)
+cron = CronService()
 cron.run()
 logging.info("Started cron service")
 

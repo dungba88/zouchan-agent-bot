@@ -2,10 +2,14 @@ from urllib.parse import urlparse, parse_qs
 
 import yt_dlp
 from langchain.agents import tool
+from langchain_community.agent_toolkits import GmailToolkit
 from langchain_community.document_loaders import RSSFeedLoader, WebBaseLoader
 from langchain.tools.retriever import create_retriever_tool
 from langchain_community.tools import TavilySearchResults
 from langchain_core.prompts import PromptTemplate
+from langchain_google_community.gmail.create_draft import GmailCreateDraft
+from langchain_google_community.gmail.send_message import GmailSendMessage
+
 from langchain_text_splitters import CharacterTextSplitter
 import logging
 
@@ -21,10 +25,12 @@ from config import (
     SUB_LLM_MODEL,
     MAIN_LLM_MODEL,
     TAVILY_ENABLED,
+    GMAIL_ENABLED,
 )
+from llm.chains.gmail_newsletter import GmailThreadSummarizer
 from llm.utils import create_llm
 from utils.db import insert_doc, load_documents_from_db, is_doc_exist
-from utils.indexing import INDEXER
+from utils.indexing import get_indexer_instance
 
 
 class SummarizeTextSchema(BaseModel):
@@ -118,11 +124,6 @@ def summarize_text(text: str):
     prompt = f"{PROMPT_TEMPLATE}. Summarize the following text in {AGENT_LANGUAGE}:\n\n{text}"
     keywords = llm.predict(prompt)
     return keywords.strip()
-    #
-    # summary = summarizer(text, max_length=150, min_length=50, do_sample=False)
-    #
-    # # Extract and return the summary text
-    # return summary[0]['summary_text']
 
 
 @tool(args_schema=GetChannelVideosSchema)
@@ -261,7 +262,7 @@ def reindex():
 
     logging.info(f"Reindexing total {len(loaded_documents)} documents...")
 
-    INDEXER.init_with_docs(loaded_documents)
+    get_indexer_instance().init_with_docs(loaded_documents)
 
     logging.info(f"{len(loaded_documents)} documents indexed")
     return len(loaded_documents)
@@ -289,6 +290,7 @@ def print_system_config():
         "AGENT_PERSONALITY": AGENT_PERSONALITY,
         "PROMPT_TEMPLATE": PROMPT_TEMPLATE,
         "TAVILY_ENABLED": TAVILY_ENABLED,
+        "GMAIL_ENABLED": GMAIL_ENABLED,
         "TOOLS": [the_tool.name for the_tool in TOOLS],
         "ADMIN_TOOLS": [the_tool.name for the_tool in ADMIN_TOOLS],
     }
@@ -307,7 +309,7 @@ def load_webpage(url: str):
 
 
 query_articles_tool = create_retriever_tool(
-    INDEXER.vector_store.as_retriever(),
+    get_indexer_instance().vector_store.as_retriever(),
     "query_articles",
     "Find news articles of a given topic",
     document_prompt=PromptTemplate.from_template(
@@ -340,8 +342,14 @@ if TAVILY_ENABLED:
         # args_schema=...,       # overwrite default args_schema: BaseModel
     )
     TOOLS.append(tavily_search_tool)
-else:
-    TOOLS.append(query_articles_tool)
+
+if GMAIL_ENABLED:
+    gmail_toolkit = GmailToolkit()
+    TOOLS += [
+        GmailThreadSummarizer(),
+        GmailSendMessage(),
+        GmailCreateDraft(),
+    ]
 
 ADMIN_TOOLS = [
     fetch_rss,

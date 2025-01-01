@@ -1,3 +1,5 @@
+import json
+
 from croniter import croniter
 from datetime import datetime
 import logging
@@ -6,13 +8,13 @@ import threading
 import time
 
 from config import CRON_PATH
+from llm.chains.utils import validate_chain, run_chain
 
 
 class CronService:
 
-    def __init__(self, agent):
+    def __init__(self):
         self.crons = self._parse_all_crons()
-        self.agent = agent
 
     def _parse_all_crons(self):
         parsed_crons = []
@@ -21,7 +23,7 @@ class CronService:
             file_path = os.path.join(CRON_PATH, filename)
 
             # Ensure it's a file
-            if os.path.isfile(file_path) and filename.endswith(".cron"):
+            if os.path.isfile(file_path) and filename.endswith(".json"):
                 logging.info(f"Parsing cron file {filename}")
                 parsed_cron = self._parse_cron_file(file_path)
                 if parsed_cron:
@@ -33,15 +35,15 @@ class CronService:
     def _parse_cron_file(file_path):
         # Open the file and read lines
         with open(file_path, "r") as file:
-            lines = file.readlines()
+            obj = json.load(file)
+            validate_chain(obj["chain"])
 
-        # Extract the schedule (first line)
-        schedule = lines[0].strip()
-
-        # Extract the prompt message (remaining lines)
-        prompt_message = "".join(lines[1:]).strip()
-
-        return {"schedule": schedule, "prompt": prompt_message, "name": file_path}
+            return {
+                "schedule": obj["schedule"],
+                "name": file_path,
+                "chain": obj["chain"],
+                "input": obj["input"],
+            }
 
     def run(self):
         for cron in self.crons:
@@ -53,7 +55,8 @@ class CronService:
             )
             thread.start()
 
-    def _schedule_task(self, config):
+    @staticmethod
+    def _schedule_task(config):
         cron = croniter(config["schedule"], datetime.now())
 
         # Calculate the next run time
@@ -69,7 +72,8 @@ class CronService:
 
             # Check if it's time to run the task
             if current_time >= next_run_time:
-                self.agent.invoke(config["prompt"])
+                logging.info(f"Executing chain {config['name']}")
+                run_chain(config["chain"], config["input"])
 
                 # Calculate the next run time
                 next_run_time = cron.get_next(datetime)
