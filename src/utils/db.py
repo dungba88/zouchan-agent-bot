@@ -52,8 +52,8 @@ def insert_doc(doc):
         (
             doc.metadata["title"],
             link,
-            json.dumps(doc.metadata),
-            json.dumps(doc.page_content),
+            json.dumps(doc.metadata, default=str),
+            str(doc.page_content),
         ),
     )
     conn.commit()
