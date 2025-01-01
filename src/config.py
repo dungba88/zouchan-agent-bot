@@ -31,10 +31,10 @@ TAVILY_ENABLED = os.environ.get("TAVILY_API_KEY") is not None
 
 # Main LLM model used for decision-making tasks
 MAIN_LLM_MODEL = {
-    "type": "llama",  # can be deepseek, openai, cohere, llama
+    "type": "openai",  # can be deepseek, openai, cohere, llama
     "config": {
-        "model": "llama3.1",
-        "temperature": 0,
+        "model": "gpt-4o-mini",
+        "temperature": 0.5,
     },
 }
 
