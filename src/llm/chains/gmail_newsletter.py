@@ -69,8 +69,6 @@ class GmailThreadSummarizer(BaseTool):
                 "max_results": max_results,
             }
         )
-        if not threads:
-            return {"error": "No threads found for the given query."}
 
         results = []
         for thread in threads:

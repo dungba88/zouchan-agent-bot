@@ -3,6 +3,7 @@ langchain-huggingface
 langchain-ollama
 langchain-openai
 langchain-community
+langchain-google-community[gmail]
 langchain-core
 langchain-text-splitters
 langgraph

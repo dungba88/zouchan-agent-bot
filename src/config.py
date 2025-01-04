@@ -32,7 +32,7 @@ MAIN_LLM_MODEL = {
 SUB_LLM_MODEL = {
     "type": "llama",
     "config": {
-        "model": "llama3.1",
+        "model": "llama3.2",
         "temperature": 0,
     },
 }

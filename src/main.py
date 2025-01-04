@@ -7,9 +7,11 @@ import os
 
 from config import STATIC_RESOURCES_PATH, BOT_NAME
 from flask import Flask, request, jsonify, render_template, abort, send_from_directory
+import json
 import logging
 
 from llm.agent import ReactAgent, PlanExecuteAgent
+from llm.chains.utils import CHAINS, run_chain
 from llm.rag import RagChain
 from llm.tools import TOOLS, ADMIN_TOOLS
 from utils.cronservices import CronService
@@ -56,6 +58,26 @@ def call_rag():
 @app.route("/index")
 def index():
     return render_template("index.html", bot_name=BOT_NAME)
+
+
+@app.route("/chain")
+def chain():
+    return render_template(
+        "chain.html",
+        chains=[name for name in CHAINS.keys()],
+        chain_schema={
+            name: value.input_schema.model_json_schema()
+            for name, value in CHAINS.items()
+        },
+    )
+
+
+@app.route("/invoke-chain")
+def invoke_chain():
+    chain_name = request.args.get("chain")
+    chain_input = json.loads(request.args.get("input"))
+    response = run_chain(chain_name, chain_input)
+    return jsonify({"response": response, "status": "success"}), 200
 
 
 # Route to render the HTML page

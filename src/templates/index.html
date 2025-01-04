@@ -574,7 +574,6 @@
                     };
                 })
                 .catch(error => {
-                    console.log(error);
                     document.getElementById('errorMessage').innerHTML = error;
                     const errorModalInstance = M.Modal.getInstance(document.getElementById('errorModal'));
                     errorModalInstance.open();
