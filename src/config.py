@@ -18,10 +18,14 @@ Return the response in expressive markdown format."""
 
 TAVILY_ENABLED = os.environ.get("TAVILY_API_KEY") is not None
 GMAIL_ENABLED = True
+LANGSMITH_ENABLED = True
+
+if LANGSMITH_ENABLED:
+    os.environ["LANGCHAIN_TRACING"] = "false"
 
 # Main LLM model used for decision-making tasks
 MAIN_LLM_MODEL = {
-    "type": "openai",  # can be deepseek, openai, cohere, llama
+    "type": "openai",  # can be bedrock, deepseek, openai, cohere, llama
     "config": {
         "model": "gpt-4o-mini",
         "temperature": 0.5,

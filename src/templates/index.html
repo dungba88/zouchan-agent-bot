@@ -454,7 +454,16 @@
         }
         if (message['type'] !== 'tool' && message['data']['content']) {
             if (markdown) {
-                content += `<p>${marked.marked(message['data']['content'])}</p>`;
+                const messageContent = message['data']['content'];
+                if (Array.isArray(messageContent)) {
+                    messageContent.forEach((m) => {
+                        if (m['text'] !== undefined) {
+                            content += `<p>${marked.marked(m['text'])}</p>`;
+                        }
+                    });
+                } else {
+                    content += `<p>${marked.marked(messageContent)}</p>`;
+                }
             } else {
                 content += `<p>${message['data']['content']}</p>`;
             }

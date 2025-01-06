@@ -1,3 +1,4 @@
+langchain-aws
 langchain-cohere
 langchain-huggingface
 langchain-ollama
@@ -14,3 +15,5 @@ pydantic
 Flask
 croniter
 black
+feedparser
+newspaper3k

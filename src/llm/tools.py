@@ -26,6 +26,7 @@ from config import (
     MAIN_LLM_MODEL,
     TAVILY_ENABLED,
     GMAIL_ENABLED,
+    LANGSMITH_ENABLED,
 )
 from llm.chains.gmail_newsletter import GmailThreadSummarizer
 from llm.utils import create_llm
@@ -283,16 +284,23 @@ def print_system_config():
     Call this when someone asks for your system configuration.
     """
     return {
-        "MAIN_LLM": MAIN_LLM_MODEL,
-        "SUB_LLM": SUB_LLM_MODEL,
-        "AGENT_LANGUAGE": AGENT_LANGUAGE,
+        "MODELS": {
+            "MAIN_LLM": MAIN_LLM_MODEL,
+            "SUB_LLM": SUB_LLM_MODEL,
+        },
         "BOT_NAME": BOT_NAME,
+        "AGENT_LANGUAGE": AGENT_LANGUAGE,
         "AGENT_PERSONALITY": AGENT_PERSONALITY,
         "PROMPT_TEMPLATE": PROMPT_TEMPLATE,
-        "TAVILY_ENABLED": TAVILY_ENABLED,
-        "GMAIL_ENABLED": GMAIL_ENABLED,
-        "TOOLS": [the_tool.name for the_tool in TOOLS],
-        "ADMIN_TOOLS": [the_tool.name for the_tool in ADMIN_TOOLS],
+        "SERVICES_ENABLED": {
+            "TAVILY_ENABLED": TAVILY_ENABLED,
+            "GMAIL_ENABLED": GMAIL_ENABLED,
+            "LANGSMITH_ENABLED": LANGSMITH_ENABLED,
+        },
+        "TOOLS": {
+            "USER_TOOLS": [the_tool.name for the_tool in TOOLS],
+            "ADMIN_TOOLS": [the_tool.name for the_tool in ADMIN_TOOLS],
+        },
     }
 
 

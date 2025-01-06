@@ -1,6 +1,7 @@
 import os
 from datetime import datetime, timedelta
 
+from langchain_aws import ChatBedrockConverse
 from langchain_cohere import ChatCohere
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_ollama import ChatOllama
@@ -16,6 +17,8 @@ def create_llm(model):
             openai_api_base="https://api.deepseek.com",
             max_tokens=8192,
         )
+    if model["type"] == "bedrock":
+        return ChatBedrockConverse(**model["config"])
     if model["type"] == "openai":
         return ChatOpenAI(**model["config"])
     if model["type"] == "cohere":
