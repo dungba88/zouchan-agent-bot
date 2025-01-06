@@ -69,7 +69,7 @@ def load_documents_from_db():
     c = conn.cursor()
 
     # Retrieve metadata and content from the database
-    c.execute("SELECT metadata, content FROM documents")
+    c.execute("SELECT metadata, content, timestamp FROM documents")
     rows = c.fetchall()
 
     # List to store LangChain documents
@@ -78,6 +78,7 @@ def load_documents_from_db():
     for row in rows:
         # Parse the metadata and content from JSON text
         metadata = json.loads(row[0])  # Assuming metadata is stored as a JSON string
+        metadata["published_date"] = row[2]
         content = row[1]  # Assuming content is stored as a JSON string
 
         # Create a LangChain Document object

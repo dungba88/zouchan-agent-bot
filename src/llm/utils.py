@@ -1,3 +1,4 @@
+import logging
 import os
 from datetime import datetime, timedelta
 
@@ -9,7 +10,7 @@ from langchain_openai import ChatOpenAI
 
 
 def create_llm(model):
-
+    logging.info(f"Creating new model {model}")
     if model["type"] == "deepseek":
         return ChatOpenAI(
             model="deepseek-chat",
@@ -63,3 +64,10 @@ def get_year_days(today=datetime.today()):
         "first_day": str(first_day.date()),
         "last_day": str(last_day.date()),
     }
+
+
+def get_last_monday(today=datetime.now()):
+    # Calculate the number of days since the last Monday
+    days_since_monday = today.weekday()  # Monday is 0, Sunday is 6
+    last_monday = today - timedelta(days=days_since_monday + 7)
+    return last_monday.date()

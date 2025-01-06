@@ -1,5 +1,6 @@
 # Define the SQLite database path
 import os
+from datetime import datetime
 
 # Define the Agent language
 AGENT_LANGUAGE = "Vietnamese"
@@ -14,7 +15,10 @@ AGENT_PERSONALITY = "helpful and caring assistant"
 PROMPT_TEMPLATE = f"""You are a {AGENT_PERSONALITY} that responds only in {AGENT_LANGUAGE}, \
 unless the prompt specially ask for another language.
 When responding, use natural and human-friendly language.
-Return the response in expressive markdown format."""
+Return the response in expressive markdown format.
+
+Current time is {datetime.today().strftime("%Y-%m-%d %H:%M:%S")}.
+"""
 
 TAVILY_ENABLED = os.environ.get("TAVILY_API_KEY") is not None
 GMAIL_ENABLED = True

@@ -1,12 +1,13 @@
+from datetime import datetime
+from typing import List
 from urllib.parse import urlparse, parse_qs
 
 import yt_dlp
 from langchain.agents import tool
 from langchain_community.agent_toolkits import GmailToolkit
 from langchain_community.document_loaders import RSSFeedLoader, WebBaseLoader
-from langchain.tools.retriever import create_retriever_tool
 from langchain_community.tools import TavilySearchResults
-from langchain_core.prompts import PromptTemplate
+from langchain_core.documents import Document
 from langchain_google_community.gmail.create_draft import GmailCreateDraft
 from langchain_google_community.gmail.send_message import GmailSendMessage
 
@@ -69,7 +70,15 @@ class LoadWebpageSchema(BaseModel):
     url: str = Field(description="the URL to get the content")
 
 
-llm = create_llm(model=SUB_LLM_MODEL)
+class QueryArticlesSchema(BaseModel):
+    query: str = Field(description="The search query string.")
+    max_results: int = Field(
+        description="The maximum number of documents to return.", default=50
+    )
+    published_date: str = Field(
+        description=" The minimum published date (YYYY-MM-DD) for filtering",
+        default=None,
+    )
 
 
 def split_doc(doc):
@@ -123,7 +132,7 @@ def summarize_text(text: str):
     """
     # Generate the summary
     prompt = f"{PROMPT_TEMPLATE}. Summarize the following text in {AGENT_LANGUAGE}:\n\n{text}"
-    keywords = llm.predict(prompt)
+    keywords = create_llm(model=SUB_LLM_MODEL).predict(prompt)
     return keywords.strip()
 
 
@@ -222,7 +231,7 @@ def extract_keywords(content: str) -> str:
     Extract keywords from a text and return a comma-separated values of keywords
     """
     prompt = f"Extract important keywords or topics from the following text as comma-separate values:\n\n{content}"
-    keywords = llm.predict(prompt)
+    keywords = create_llm(model=SUB_LLM_MODEL).predict(prompt)
     return keywords.strip()
 
 
@@ -316,14 +325,33 @@ def load_webpage(url: str):
     ]
 
 
-query_articles_tool = create_retriever_tool(
-    get_indexer_instance().vector_store.as_retriever(),
-    "query_articles",
-    "Find news articles of a given topic",
-    document_prompt=PromptTemplate.from_template(
-        '{{"title": "{title}", "url": "{link}", "content": "{page_content}"}}'
-    ),
-)
+@tool(args_schema=QueryArticlesSchema)
+def query_articles_tool(
+    query: str, max_results: int = 50, published_date: str = None
+) -> List[Document]:
+    """
+    Find news articles of a given topic with configured max results and date filtering.
+    :return: A list of documents matching the criteria.
+    """
+    # Parse the published_date into a datetime object
+    full_date = f"{published_date} 00:00:00"
+    min_date = datetime.strptime(full_date, "%Y-%m-%d %H:%M:%S")
+
+    # Step 1: Perform similarity search
+    similar_docs = get_indexer_instance().vector_store.similarity_search(
+        query, k=max_results
+    )
+
+    # Step 2: Filter based on the published_date
+    filtered_docs = [
+        doc
+        for doc in similar_docs
+        if "published_date" in doc.metadata
+        and datetime.strptime(doc.metadata["published_date"], "%Y-%m-%d %H:%M:%S")
+        > min_date
+    ]
+
+    return filtered_docs
 
 
 TOOLS = [
@@ -335,6 +363,7 @@ TOOLS = [
     summarize_yt_transcript,
     extract_keywords,
     load_webpage,
+    query_articles_tool,
 ]
 if TAVILY_ENABLED:
     tavily_search_tool = TavilySearchResults(

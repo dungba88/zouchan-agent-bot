@@ -1,5 +1,6 @@
 from langchain_core.runnables import Runnable
 
+from llm.chains.articles_newsletter import articles_newsletter
 from llm.chains.gmail_newsletter import gmail_newsletter
 from llm.chains.refresh_rss import refresh_rss
 
@@ -7,6 +8,7 @@ from llm.chains.refresh_rss import refresh_rss
 CHAINS: dict[str, Runnable] = {
     "gmail_newsletter": gmail_newsletter,
     "refresh_rss": refresh_rss,
+    "articles_newsletter": articles_newsletter,
 }
 
 

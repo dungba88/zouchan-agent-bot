@@ -13,9 +13,6 @@ from pydantic import BaseModel, Field
 from config import SUB_LLM_MODEL, AGENT_LANGUAGE, MAIN_LLM_MODEL
 from llm.utils import get_month_days, get_week_days, get_year_days, create_llm
 
-llm = create_llm(SUB_LLM_MODEL)
-main_llm = create_llm(MAIN_LLM_MODEL)
-
 
 EMAIL_SUMMARIZER_PROMPT = PromptTemplate(
     input_variables=["content"],
@@ -35,6 +32,8 @@ EMAIL_SUMMARIZER_PROMPT = PromptTemplate(
 
 
 class NewsletterOutput(BaseModel):
+    """The output of newsletter generation"""
+
     title: str = Field("The newsletter title")
     content: str = Field("The newsletter content")
 
@@ -53,6 +52,7 @@ class GmailThreadSummarizer(BaseTool):
         if not message_content:
             return "No content to summarize."
 
+        llm = create_llm(SUB_LLM_MODEL)
         the_chain = EMAIL_SUMMARIZER_PROMPT | llm | StrOutputParser()
         return the_chain.invoke({"content": message_content})
 
@@ -155,6 +155,8 @@ def gmail_newsletter(chain_input: GmailNewsletterSchema):
     )
 
     # Search Gmail for threads
+    main_llm = create_llm(MAIN_LLM_MODEL)
+
     newsletter_chain = newsletter_prompt | main_llm.with_structured_output(
         NewsletterOutput
     )
