@@ -20,6 +20,9 @@ Return the response in expressive markdown format.
 Current time is {datetime.today().strftime("%Y-%m-%d %H:%M:%S")}.
 """
 
+# Whether to enable short-term memory
+USE_SHORT_TERM_MEMORY = True
+
 TAVILY_ENABLED = os.environ.get("TAVILY_API_KEY") is not None
 GMAIL_ENABLED = True
 LANGSMITH_ENABLED = True

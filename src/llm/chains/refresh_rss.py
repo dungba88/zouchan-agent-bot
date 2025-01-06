@@ -13,6 +13,9 @@ class RefreshRSSSchema(BaseModel):
 @chain
 def refresh_rss(chain_input: RefreshRSSSchema):
     urls = [{"urls": [url]} for url in chain_input.urls]
-    fetch_rss.map().invoke(urls)
-
-    return reindex.invoke({})
+    fetch_response = fetch_rss.map().invoke(urls)
+    reindex_response = reindex.invoke({})
+    return {
+        "fetch_response": fetch_response,
+        "reindex_response": reindex_response,
+    }

@@ -330,7 +330,9 @@ def query_articles_tool(
     query: str, max_results: int = 50, published_date: str = None
 ) -> List[Document]:
     """
-    Find news articles of a given topic with configured max results and date filtering.
+    Find news/articles of a given topic. Only search in the indexed RSS feeds.
+    For broader Internet-scoped search, use Tavily tool.
+    For research papers specifically, use search_for_research_paper tool.
     :return: A list of documents matching the criteria.
     """
     # Parse the published_date into a datetime object

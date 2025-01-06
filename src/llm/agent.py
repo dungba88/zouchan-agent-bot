@@ -11,14 +11,14 @@ from langgraph.graph import StateGraph
 from langgraph.prebuilt import create_react_agent
 from pydantic import BaseModel, Field
 
-from config import PROMPT_TEMPLATE, MAIN_LLM_MODEL
+from config import PROMPT_TEMPLATE, MAIN_LLM_MODEL, USE_SHORT_TERM_MEMORY
 from llm.utils import create_llm
 
 
 class BaseAgent:
     def __init__(self, tools):
         self.llm = create_llm(MAIN_LLM_MODEL)
-        self.memory = MemorySaver()
+        self.memory = self.initialize_memory()
         # Initialize the memory for short-term memory (conversation history)
         self.react_agent = create_react_agent(
             self.llm,
@@ -26,6 +26,12 @@ class BaseAgent:
             checkpointer=self.memory,
             state_modifier=PROMPT_TEMPLATE,
         )
+
+    @staticmethod
+    def initialize_memory():
+        if USE_SHORT_TERM_MEMORY:
+            return MemorySaver()
+        return None
 
 
 class ReactAgent(BaseAgent):
