@@ -3,7 +3,7 @@ import os
 from datetime import datetime
 
 # Define the Agent language
-AGENT_LANGUAGE = "Vietnamese"
+AGENT_LANGUAGE = "English"
 
 # Define the bot name
 BOT_NAME = "Zou-chan"
