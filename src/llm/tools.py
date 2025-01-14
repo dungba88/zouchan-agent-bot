@@ -10,7 +10,8 @@ from langchain.agents import tool
 from langchain_community.agent_toolkits import GmailToolkit
 from langchain_community.document_loaders import (
     RSSFeedLoader,
-    PlaywrightURLLoader, PyPDFLoader,
+    PlaywrightURLLoader,
+    PyPDFLoader,
 )
 from langchain_community.tools import TavilySearchResults
 from langchain_core.documents import Document
@@ -214,9 +215,11 @@ def summarize_yt_transcript(video_url: str) -> str:
     (e.g., 'https://m.youtube.com/watch?v=VIDEO_ID'), and shortened YouTube links
     (e.g., 'https://youtu.be/VIDEO_ID').
     """
-    return summarize_text.invoke({
-        "text": extract_yt_transcript(video_url),
-    })
+    return summarize_text.invoke(
+        {
+            "text": extract_yt_transcript(video_url),
+        }
+    )
 
 
 @tool(args_schema=ExtractYTTranscriptSchema)
@@ -381,9 +384,7 @@ class PDFDownloaderAndLoader:
 
 
 @tool(args_schema=LoadWebpageSchema)
-def load_webpage(
-    url: str, post_content_prompt: str = None
-):
+def load_webpage(url: str, post_content_prompt: str = None):
     """
     Load a Web page and optionally summarize the content if requested.
     """
@@ -391,14 +392,18 @@ def load_webpage(
         logging.info("URL is PDF, downloading and loading as PDF instead")
         documents = PDFDownloaderAndLoader(url=url).load()
     else:
-        documents = PlaywrightURLLoader(urls=[url], headless=False, continue_on_failure=False).load()
+        documents = PlaywrightURLLoader(
+            urls=[url], headless=False, continue_on_failure=False
+        ).load()
     return [
         {
             "metadata": doc.metadata,
-            "page_content": summarize_text.invoke({
-                "text": doc.page_content,
-                "additional_summarize_prompt": post_content_prompt,
-            }),
+            "page_content": summarize_text.invoke(
+                {
+                    "text": doc.page_content,
+                    "additional_summarize_prompt": post_content_prompt,
+                }
+            ),
         }
         for doc in documents
     ]
@@ -467,24 +472,27 @@ def query_articles_tool(
     :return: A list of documents matching the criteria.
     """
     # Parse the published_date into a datetime object
-    full_date = f"{published_date} 00:00:00"
-    min_date = datetime.strptime(full_date, "%Y-%m-%d %H:%M:%S")
+    min_date = None
+    if published_date is not None:
+        full_date = f"{published_date} 00:00:00"
+        min_date = datetime.strptime(full_date, "%Y-%m-%d %H:%M:%S")
 
     # Step 1: Perform similarity search
     similar_docs = get_indexer_instance().vector_store.similarity_search(
         query, k=max_results
     )
 
+    if min_date is None:
+        return similar_docs
+
     # Step 2: Filter based on the published_date
-    filtered_docs = [
+    return [
         doc
         for doc in similar_docs
         if "published_date" in doc.metadata
         and datetime.strptime(doc.metadata["published_date"], "%Y-%m-%d %H:%M:%S")
         > min_date
     ]
-
-    return filtered_docs
 
 
 TOOLS = [
