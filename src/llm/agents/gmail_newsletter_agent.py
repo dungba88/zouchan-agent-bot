@@ -1,6 +1,5 @@
 import logging
 from datetime import datetime
-from enum import Enum
 
 from langchain_community.tools import GmailSendMessage, GmailSearch
 from langchain_core.output_parsers import StrOutputParser
@@ -11,8 +10,7 @@ from langchain_google_community.gmail.search import Resource
 from pydantic import BaseModel, Field
 
 from config import SUB_LLM_MODEL, AGENT_LANGUAGE, MAIN_LLM_MODEL
-from llm.utils import get_month_days, get_week_days, get_year_days, create_llm
-
+from llm.utils import get_month_days, get_week_days, get_year_days, create_llm, DateRange
 
 EMAIL_SUMMARIZER_PROMPT = PromptTemplate(
     input_variables=["content"],
@@ -110,12 +108,6 @@ newsletter_prompt = PromptTemplate(
     TLDR Newsletter:
     """,
 )
-
-
-class DateRange(Enum):
-    WEEK = "week"
-    MONTH = "month"
-    YEAR = "year"
 
 
 class GmailNewsletterSchema(BaseModel):

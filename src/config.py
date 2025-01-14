@@ -1,6 +1,12 @@
-# Define the SQLite database path
+import logging
 import os
-from datetime import datetime
+
+from dotenv import load_dotenv
+
+
+load_dotenv()
+logging.info("Environment variables loaded")
+
 
 # Define the Agent language
 AGENT_LANGUAGE = "English"
@@ -12,12 +18,10 @@ BOT_NAME = "Zou-chan"
 AGENT_PERSONALITY = "helpful and caring assistant"
 
 # Define Agent prompt template
-PROMPT_TEMPLATE = f"""You are a {AGENT_PERSONALITY} that responds only in {AGENT_LANGUAGE}, \
+PROMPT_TEMPLATE = f"""You are {BOT_NAME}, a {AGENT_PERSONALITY} that responds only in {AGENT_LANGUAGE}, \
 unless the prompt specially ask for another language.
 When responding, use natural and human-friendly language.
 Return the response in expressive markdown format.
-
-Current time is {datetime.today().strftime("%Y-%m-%d %H:%M:%S")}.
 """
 
 # Whether to enable short-term memory
@@ -25,10 +29,6 @@ USE_SHORT_TERM_MEMORY = True
 
 TAVILY_ENABLED = os.environ.get("TAVILY_API_KEY") is not None
 GMAIL_ENABLED = True
-LANGSMITH_ENABLED = True
-
-if LANGSMITH_ENABLED:
-    os.environ["LANGCHAIN_TRACING"] = "false"
 
 # Main LLM model used for decision-making tasks
 MAIN_LLM_MODEL = {
@@ -48,6 +48,7 @@ SUB_LLM_MODEL = {
     },
 }
 
+# Define the SQLite database path
 DATABASE_PATH = "../data/documents.db"
 
 # Define the vector index path
