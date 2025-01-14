@@ -1,21 +1,12 @@
-from typing import List
-
-from langchain_core.runnables import chain
-from pydantic import BaseModel, Field
-
-from llm.tools import fetch_rss, reindex
+from config import BOT_NAME, AGENT_LANGUAGE
+from llm.tools import ADMIN_TOOLS
 
 
-class RefreshRSSSchema(BaseModel):
-    urls: List[str] = Field(description="List of RSS URLs to fetch")
+class AdminAgent:
 
-
-@chain
-def refresh_rss(chain_input: RefreshRSSSchema):
-    urls = [{"urls": [url]} for url in chain_input.urls]
-    fetch_response = fetch_rss.map().invoke(urls)
-    reindex_response = reindex.invoke({})
-    return {
-        "fetch_response": fetch_response,
-        "reindex_response": reindex_response,
-    }
+    def __init__(self):
+        self.prompt = f"""
+        You are {BOT_NAME}, an system admin that can do a wide range of tasks.
+        Only respond in {AGENT_LANGUAGE}.
+        """
+        self.tools = [tool.name for tool in ADMIN_TOOLS]

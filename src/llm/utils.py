@@ -1,6 +1,7 @@
 import logging
 import os
 from datetime import datetime, timedelta
+from enum import Enum
 
 from langchain_aws import ChatBedrockConverse
 from langchain_cohere import ChatCohere
@@ -66,8 +67,20 @@ def get_year_days(today=datetime.today()):
     }
 
 
-def get_last_monday(today=datetime.now()):
-    # Calculate the number of days since the last Monday
-    days_since_monday = today.weekday()  # Monday is 0, Sunday is 6
-    last_monday = today - timedelta(days=days_since_monday + 7)
-    return last_monday.date()
+class DateRange(Enum):
+    DAY = "day"
+    WEEK = "week"
+    MONTH = "month"
+    YEAR = "year"
+
+
+def get_days(date_range: DateRange, today=datetime.now()):
+    if date_range == DateRange.DAY:
+        num_days = 1
+    elif date_range == DateRange.WEEK:
+        num_days = 7
+    elif date_range == DateRange.MONTH:
+        num_days = 30
+    else:
+        num_days = 365
+    return today - timedelta(days=num_days)

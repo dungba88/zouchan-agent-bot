@@ -1,6 +1,7 @@
 import logging
 import operator
 import uuid
+from datetime import datetime
 from typing import TypedDict, List, Annotated, Tuple, Union
 
 from langchain_core.messages import message_to_dict
@@ -11,20 +12,27 @@ from langgraph.graph import StateGraph
 from langgraph.prebuilt import create_react_agent
 from pydantic import BaseModel, Field
 
-from config import PROMPT_TEMPLATE, MAIN_LLM_MODEL, USE_SHORT_TERM_MEMORY
+from config import MAIN_LLM_MODEL, USE_SHORT_TERM_MEMORY
+from llm.tools import TOOL_MAPPINGS
 from llm.utils import create_llm
 
 
 class BaseAgent:
-    def __init__(self, tools):
+
+    def __init__(self, prompt_template, tools):
         self.llm = create_llm(MAIN_LLM_MODEL)
-        self.memory = self.initialize_memory()
         # Initialize the memory for short-term memory (conversation history)
+        self.memory = self.initialize_memory()
+        # Initialize tools for the agent
+        disabled_tools = [tool for tool in tools if tool not in TOOL_MAPPINGS]
+        tools = [TOOL_MAPPINGS[tool] for tool in tools if tool in TOOL_MAPPINGS]
+        if disabled_tools:
+            logging.warning(f"Disabled tools: {disabled_tools}")
         self.react_agent = create_react_agent(
             self.llm,
             tools=tools,
             checkpointer=self.memory,
-            state_modifier=PROMPT_TEMPLATE,
+            state_modifier=prompt_template,
         )
 
     @staticmethod
@@ -36,14 +44,20 @@ class BaseAgent:
 
 class ReactAgent(BaseAgent):
 
-    def __init__(self, tools):
-        super().__init__(tools)
+    def __init__(self, prompt_template, tools):
+        super().__init__(prompt_template, tools)
 
     def invoke(self, prompt, thread_id=None):
         if thread_id is None:
             thread_id = f"system/{uuid.uuid4()}"
 
         logging.info(f"Using thread_id: {thread_id}")
+
+        prompt = f"""
+        Current time is {datetime.today().strftime("%Y-%m-%d %H:%M:%S")}.
+
+        {prompt}
+        """
 
         inputs = {"messages": [("user", prompt)]}
         config = {
@@ -119,8 +133,8 @@ def to_structured_output(llm, schema):
 
 class PlanExecuteAgent(BaseAgent):
 
-    def __init__(self, tools):
-        super().__init__(tools)
+    def __init__(self, prompt_template, tools):
+        super().__init__(prompt_template, tools)
         self.planner = self._create_planner()
         self.replanner = self._create_replanner()
         self.graph = self._create_graph()

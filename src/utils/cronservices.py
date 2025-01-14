@@ -8,7 +8,6 @@ import threading
 import time
 
 from config import CRON_PATH
-from llm.chains.utils import validate_chain, run_chain
 
 
 class CronService:
@@ -36,7 +35,7 @@ class CronService:
         # Open the file and read lines
         with open(file_path, "r") as file:
             obj = json.load(file)
-            validate_chain(obj["chain"])
+            # validate_chain(obj["chain"])
 
             return {
                 "schedule": obj["schedule"],
@@ -73,7 +72,7 @@ class CronService:
             # Check if it's time to run the task
             if current_time >= next_run_time:
                 logging.info(f"Executing chain {config['name']}")
-                run_chain(config["chain"], config["input"])
+                # run_chain(config["chain"], config["input"])
 
                 # Calculate the next run time
                 next_run_time = cron.get_next(datetime)

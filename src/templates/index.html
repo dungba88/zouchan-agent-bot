@@ -233,6 +233,19 @@
             max-height: 300px;
             overflow-y: auto;
         }
+
+        #agent_mode {
+            display: none;
+        }
+        .editing #agent_mode {
+            display: block;
+        }
+        .editing #agent_text {
+            display: none;
+        }
+        .editing #updateAgent {
+            display: none;
+        }
     </style>
 </head>
 <body>
@@ -245,15 +258,20 @@
         </div>
 
         <div class="row">
-            <div class="col s4">
-                <!-- Select Box -->
-                <select id="mode" class="browser-default">
-                    <option value="react-agent" selected>ReAct Agent Mode</option>
-                    <option value="plex-agent">Plan-Execute Agent Mode</option>
-                    <option value="rag">RAG Mode</option>
-                </select>
+            <div class="col s7">
+                <div id="agent_selector">
+                    <span id="agent_text" class="blue-text"></span>
+                    <select id="agent_mode">
+                        {% for agent in agents %}
+                        <option value="{{ agent }}">{{ agent }}</option>
+                        {% endfor %}
+                    </select>
+                    <a id="updateAgent" class="waves-effect waves-light btn-flat blue-text text-darken-2">
+                        <i class="material-icons left">edit</i>Update agent
+                    </a>
+                </div>
             </div>
-            <div class="col s8">
+            <div class="col s5">
                 <div class="right-align">
                     Welcome <span id="userMessage" class="blue-text"></span>
                     <a id="updateLink" class="waves-effect waves-light btn-flat blue-text text-darken-2" href="/register">
@@ -320,8 +338,11 @@
 
     const existingUser = localStorage.getItem('user');
 
-    const thread = `${existingUser}/${checkHashParam()}`;
+    const hashParams = checkHashParam();
+    const thread = `${existingUser}/${hashParams.agent}/${hashParams.thread}`;
+    const agent = hashParams.agent;
     console.log('thread id: ', thread);
+    console.log('agent: ', agent);
 
     const dbName = "conversations";
     let db;
@@ -385,15 +406,22 @@
     function checkHashParam() {
         // Get the URL query string
         const urlParams = new URLSearchParams(window.location.search);
-        const hash = urlParams.get('thread');
+        let thread = urlParams.get('thread');
+        let agent = urlParams.get('agent');
 
-        // If 'hash' is not in the URL, generate a new UUID and redirect
-        if (hash) {
-            return hash;
+        if (thread && agent) {
+            return {
+                thread: thread,
+                agent: agent,
+            };
         }
-        const newHash = generateUUID();
-        // Redirect to the same URL with the generated 'hash'
-        window.location.href = window.location.pathname + '?thread=' + newHash;
+        if (!thread) {
+            thread = generateUUID();
+        }
+        if (!agent) {
+            agent = "playground_agent";
+        }
+        window.location.href = window.location.pathname + '?thread=' + thread + '&agent=' + agent;
     }
 
     function parseUrl(url) {
@@ -443,7 +471,7 @@
     function renderMessage(message, markdown) {
         let avatar = message['type']
         if (message['type'] === 'ai') {
-            message['type'] = '{{ bot_name }}';
+            message['type'] = '{{ bot_name }} (' + agent + ')';
             avatar = 'bot_avatar'
         }
         let content = "";
@@ -497,13 +525,11 @@
         if (message) {
             var sendButton = document.getElementById('sendButton');
             var responseText = document.getElementById('responseContent');
-            var mode = document.getElementById('mode');
 
             // Disable the button and add loading style
             sendButton.classList.add("is-loading");
             disable(sendButton);
             disable(prompt);
-            disable(mode);
 
             responseText.innerHTML += renderMessage({
                 'type': 'human',
@@ -515,7 +541,7 @@
             panel.scrollTop = panel.scrollHeight;
 
             // Make the AJAX call to the /rag endpoint
-            fetch(`/${mode.value}?prompt=${encodeURIComponent(message)}&thread_id=${thread}`)
+            fetch(`/invoke-agent/${agent}?prompt=${encodeURIComponent(message)}&thread_id=${thread}`)
                 .then((response) => {
                     if (!response.ok) {
                         return response.text().then(text => Promise.reject(text));
@@ -524,27 +550,6 @@
                 })
                 .then(data => {
                     let output = marked.marked(data.response.output);
-                    // if (data.response.context != null) {
-                    //     output += "##### Context\n";
-                    //     data.response.context.forEach((context) => {
-                    //         const source = context.metadata.source ?? "external:" + parseUrl(context.metadata.link);
-                    //         output += " - [" + context.metadata.title + "](" + context.metadata.link + ") *(Source: " + source + ")*\n";
-                    //     })
-                    // }
-                    //
-                    // if (data.response.events != null) {
-                    //     output += "##### Events\n";
-                    //     data.response.events.forEach((event) => {
-                    //         if (event['role'] === 'plan') {
-                    //             output += `**Planning**: ${event['plan']}\n\n`;
-                    //         } else if (event['role'] === 'agent') {
-                    //             output += `**Agent - Executed steps**: ${event['past_steps']}\n\n`;
-                    //         } else if (event['role'] === 'replan') {
-                    //             let decision = event['response'] != null ? "Final Answer: " + event['response'] : "Replanning needed: " + event['plan'];
-                    //             output += `**Replanning**: ${decision}\n\n`;
-                    //         }
-                    //     });
-                    // }
 
                     if (data.response.messages != null && data.response.messages.length > 0) {
                         let chainOfThoughtOutput = "";
@@ -592,7 +597,6 @@
                     sendButton.classList.remove("is-loading");
                     enable(sendButton);
                     enable(prompt);
-                    enable(mode);
                     prompt.focus();
 
                     panel.scrollTop = panel.scrollHeight;
@@ -610,6 +614,20 @@
 
         // Handle the submit button click
         document.getElementById('sendButton').addEventListener('click', sendInput);
+
+        document.getElementById('agent_text').innerText = agent;
+        document.getElementById('agent_mode').value = agent;
+        document.getElementById('updateAgent').addEventListener('click', function() {
+            document.getElementById('agent_selector').classList.add('editing');
+        });
+        document.getElementById('agent_mode').addEventListener('change', function() {
+            const newValue = document.getElementById('agent_mode').value;
+            const urlParams = new URLSearchParams(window.location.search);
+            // Update the `agent` parameter
+            urlParams.set('agent', newValue);
+            // Redirect to the new URL
+            window.location.search = urlParams.toString();
+        });
 
         const modal = document.querySelectorAll('.modal');
         M.Modal.init(modal, {

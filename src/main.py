@@ -1,4 +1,7 @@
+import logging
+
 from utils.logging_utils import setup_logging
+
 
 # setup logging before anything else
 setup_logging()
@@ -7,49 +10,26 @@ import os
 
 from config import STATIC_RESOURCES_PATH, BOT_NAME
 from flask import Flask, request, jsonify, render_template, abort, send_from_directory
-import json
-import logging
 
-from llm.agent import ReactAgent, PlanExecuteAgent
-from llm.chains.utils import CHAINS, run_chain
-from llm.rag import RagChain
-from llm.tools import TOOLS, ADMIN_TOOLS
+from llm.agents.utils import create_agents
 from utils.cronservices import CronService
 
 
 app = Flask(__name__)
 
-react_agent = ReactAgent(tools=TOOLS + ADMIN_TOOLS)
-logging.info("Created re-act agent")
-plex_agent = PlanExecuteAgent(tools=TOOLS + ADMIN_TOOLS)
-logging.info("Created plan-execute agent")
-rag = RagChain()
-logging.info("Created RAG chain")
+agents = create_agents()
+logging.info(f"Agents created: {agents.keys()}")
 
 cron = CronService()
 cron.run()
 logging.info("Started cron service")
 
 
-@app.route("/react-agent", methods=["GET"])
-def call_react_agent():
+@app.route("/invoke-agent/<path:agent>", methods=["GET"])
+def call_react_agent(agent):
     prompt = request.args.get("prompt")
     thread_id = request.args.get("thread_id")
-    response = react_agent.invoke(prompt, thread_id)
-    return jsonify({"response": response, "status": "success"}), 200
-
-
-@app.route("/plex-agent", methods=["GET"])
-def call_plex_agent():
-    prompt = request.args.get("prompt")
-    response = plex_agent.invoke(prompt)
-    return jsonify({"response": response, "status": "success"}), 200
-
-
-@app.route("/rag", methods=["GET"])
-def call_rag():
-    prompt = request.args.get("prompt")
-    response = rag.invoke(prompt)
+    response = agents[agent].invoke(prompt, thread_id)
     return jsonify({"response": response, "status": "success"}), 200
 
 
@@ -57,27 +37,7 @@ def call_rag():
 @app.route("/")
 @app.route("/index")
 def index():
-    return render_template("index.html", bot_name=BOT_NAME)
-
-
-@app.route("/chain")
-def chain():
-    return render_template(
-        "chain.html",
-        chains=[name for name in CHAINS.keys()],
-        chain_schema={
-            name: value.input_schema.model_json_schema()
-            for name, value in CHAINS.items()
-        },
-    )
-
-
-@app.route("/invoke-chain")
-def invoke_chain():
-    chain_name = request.args.get("chain")
-    chain_input = json.loads(request.args.get("input"))
-    response = run_chain(chain_name, chain_input)
-    return jsonify({"response": response, "status": "success"}), 200
+    return render_template("index.html", bot_name=BOT_NAME, agents=agents.keys())
 
 
 # Route to render the HTML page

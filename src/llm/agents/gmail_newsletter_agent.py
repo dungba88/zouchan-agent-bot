@@ -1,16 +1,14 @@
-import logging
-from datetime import datetime
+from typing import Type
 
-from langchain_community.tools import GmailSendMessage, GmailSearch
+from langchain_community.tools import GmailSearch
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import PromptTemplate
-from langchain_core.runnables import chain
 from langchain_core.tools import BaseTool
 from langchain_google_community.gmail.search import Resource
 from pydantic import BaseModel, Field
 
-from config import SUB_LLM_MODEL, AGENT_LANGUAGE, MAIN_LLM_MODEL
-from llm.utils import get_month_days, get_week_days, get_year_days, create_llm, DateRange
+from config import SUB_LLM_MODEL, AGENT_LANGUAGE, BOT_NAME, AGENT_PERSONALITY
+from llm.utils import create_llm
 
 EMAIL_SUMMARIZER_PROMPT = PromptTemplate(
     input_variables=["content"],
@@ -29,11 +27,21 @@ EMAIL_SUMMARIZER_PROMPT = PromptTemplate(
 )
 
 
-class NewsletterOutput(BaseModel):
-    """The output of newsletter generation"""
-
-    title: str = Field("The newsletter title")
-    content: str = Field("The newsletter content")
+class GmailThreadSummarizerSchema(BaseModel):
+    query: str = Field(
+        description="The Gmail query. Example filters include from:sender,"
+        " to:recipient, subject:subject, -filtered_term,"
+        " in:folder, is:important|read|starred, after:year/mo/date, "
+        "before:year/mo/date, label:label_name"
+        ' "exact phrase".'
+        " Search newer/older than using d (day), m (month), and y (year): "
+        "newer_than:2d, older_than:1y."
+        " Attachments with extension example: filename:pdf. Multiple term"
+        " matching example: from:amy OR from:david.",
+    )
+    max_results: int = Field(
+        description="The max number of emails to return", default=100
+    )
 
 
 class GmailThreadSummarizer(BaseTool):
@@ -42,6 +50,7 @@ class GmailThreadSummarizer(BaseTool):
         "Searches Gmail emails by threads using a query and max_results, "
         "then summarizes each message and the entire thread using an LLM."
     )
+    args_schema: Type[BaseModel] = GmailThreadSummarizerSchema
 
     @staticmethod
     def summarize_message(message: dict) -> str:
@@ -87,88 +96,21 @@ class GmailThreadSummarizer(BaseTool):
         }
 
 
-newsletter_prompt = PromptTemplate(
-    input_variables=["results", "category", "start_date", "end_date"],
-    template=f"""
-    Create a TLDR-style newsletter following emails in {AGENT_LANGUAGE}.
-    - Come up with a title for the newsletter
-    - The top of the newsletter should contain a short summary of all emails.
-    - The newsletter should be grouped by email sender.
-    - Keep the source or URL to see more details if possible in properly formatted HTML
-    - The emails are a JSON list, where each item will have "subject", "sender", "summary". 
-    - Note that the emails are already summarized.
-    - The output should be in HTML format
-    
-    The emails are retrieved during the period of {{start_date}} to {{end_date}}
-    in the category {{category}}
+class GmailNewsletterAgent:
 
-    Emails:
-    {{results}}
-
-    TLDR Newsletter:
-    """,
-)
-
-
-class GmailNewsletterSchema(BaseModel):
-    date_range: DateRange = Field(
-        description="The date range to search for emails, can be week, month or year"
-    )
-    category: str = Field(description="The category to search for emails")
-    email: str = Field(description="The email address to send to")
-    today: datetime = Field(description="Today time", default=datetime.today())
-    max_results: int = Field(description="The max number of emails", default=100)
-
-
-def get_dates(date_range, today):
-    if date_range == DateRange.YEAR:
-        return get_year_days(today)
-    if date_range == DateRange.MONTH:
-        return get_month_days(today)
-    return get_week_days(today)
-
-
-@chain
-def gmail_newsletter(chain_input: GmailNewsletterSchema):
-    date_range = chain_input.date_range
-    category = chain_input.category
-    max_results = chain_input.max_results
-    email = chain_input.email
-    today = chain_input.today
-
-    dates = get_dates(date_range, today)
-
-    query = f"after:{dates['first_day']} before:{dates['last_day']} category:{category}"
-    threads = GmailThreadSummarizer().run(
-        {
-            "query": query,
-            "max_results": max_results,
-        }
-    )
-
-    # Search Gmail for threads
-    main_llm = create_llm(MAIN_LLM_MODEL)
-
-    newsletter_chain = newsletter_prompt | main_llm.with_structured_output(
-        NewsletterOutput
-    )
-
-    # Summarize everything into a newsletter
-    newsletter = newsletter_chain.invoke(
-        {
-            "results": threads["results"],
-            "category": category,
-            "start_date": dates["first_day"],
-            "end_date": dates["last_day"],
-        }
-    )
-
-    # Send the newsletter
-    GmailSendMessage().invoke(
-        {
-            "to": email,
-            "subject": f"Your {date_range.value}ly '{category}' Newsletter ({dates['first_day']} to {dates['last_day']})",
-            "message": newsletter.content,
-        }
-    )
-    logging.info("Newsletter sent!")
+    def __init__(self):
+        self.prompt = f"""
+        You are {BOT_NAME}, a {AGENT_PERSONALITY} that specializes in generating TLDR newsletter from emails. 
+        Your task is to create TLDR-style newsletter for emails in {AGENT_LANGUAGE}.
+        - Come up with a title for the newsletter
+        - Pay attention when searching for emails, you must absolutely follow all criteria given by users
+          such as time range, category or sender.
+        - The top of the newsletter should contain a short summary of all emails.
+        - The newsletter should be grouped by email sender.
+        - Keep the source or URL to see more details if possible
+        - Default output (unless specified by user): Markdown
+        """
+        self.tools = [
+            "gmail_thread_summarizer",
+            "send_gmail_message",
+        ]

@@ -1,24 +1,22 @@
-from langchain_core.runnables import Runnable
-
-from llm.chains.articles_newsletter import articles_newsletter
-from llm.chains.gmail_newsletter import gmail_newsletter
-from llm.chains.refresh_rss import refresh_rss
-from llm.chains.weather_notify import weather_notify
-
-CHAINS: dict[str, Runnable] = {
-    "gmail_newsletter": gmail_newsletter,
-    "refresh_rss": refresh_rss,
-    "articles_newsletter": articles_newsletter,
-    "weather_notify": weather_notify,
-}
+from llm.agent import ReactAgent
+from llm.agents.admin_agent import AdminAgent
+from llm.agents.articles_newsletter_agent import ArticlesNewsletterAgent
+from llm.agents.gmail_newsletter_agent import GmailNewsletterAgent
+from llm.agents.playground_agent import PlaygroundAgent
+from llm.agents.research_assistant_agent import ResearchAssistantAgent
+from llm.agents.weather_assistant_agent import WeatherAssistantAgent
 
 
-def validate_chain(chain):
-    if chain not in CHAINS:
-        raise ValueError(f"Unrecognized chain {chain}, supported: {CHAINS.keys()}")
-
-
-def run_chain(chain: str, chain_input: dict):
-    validate_chain(chain)
-    the_chain = CHAINS[chain]
-    return the_chain.invoke(the_chain.input_schema.model_validate(chain_input))
+def create_agents():
+    agent_configs = {
+        "playground_agent": PlaygroundAgent(),
+        "research_assistant_agent": ResearchAssistantAgent(),
+        "articles_newsletter_agent": ArticlesNewsletterAgent(),
+        "gmail_newsletter_agent": GmailNewsletterAgent(),
+        "weather_assistant_agent": WeatherAssistantAgent(),
+        "admin_agent": AdminAgent(),
+    }
+    return {
+        name: ReactAgent(config.prompt, config.tools)
+        for name, config in agent_configs.items()
+    }

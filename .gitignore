@@ -6,3 +6,4 @@ data/vectorstore
 data/documents.db
 src/credentials.json
 token.json
+__pycache__/
