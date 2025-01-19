@@ -1,5 +1,3 @@
-import logging
-
 from utils.logging_utils import setup_logging
 
 
@@ -7,6 +5,7 @@ from utils.logging_utils import setup_logging
 setup_logging()
 
 import os
+import logging
 
 from config import STATIC_RESOURCES_PATH, BOT_NAME
 from flask import Flask, request, jsonify, render_template, abort, send_from_directory
@@ -75,4 +74,4 @@ def serve_static_resource(filename):
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(host="0.0.0.0", port=5050, debug=True)
