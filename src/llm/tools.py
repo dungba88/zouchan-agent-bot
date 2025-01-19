@@ -32,7 +32,6 @@ from youtube_transcript_api import YouTubeTranscriptApi
 from config import (
     BOT_NAME,
     AGENT_LANGUAGE,
-    PROMPT_TEMPLATE,
     AGENT_PERSONALITY,
     SUB_LLM_MODEL,
     MAIN_LLM_MODEL,
@@ -329,7 +328,6 @@ def print_system_config():
         "BOT_NAME": BOT_NAME,
         "AGENT_LANGUAGE": AGENT_LANGUAGE,
         "AGENT_PERSONALITY": AGENT_PERSONALITY,
-        "PROMPT_TEMPLATE": PROMPT_TEMPLATE,
         "SERVICES_ENABLED": {
             "TAVILY_ENABLED": TAVILY_ENABLED,
             "GMAIL_ENABLED": GMAIL_ENABLED,
