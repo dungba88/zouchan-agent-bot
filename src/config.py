@@ -28,6 +28,7 @@ Return the response in expressive markdown format.
 USE_SHORT_TERM_MEMORY = True
 
 TAVILY_ENABLED = os.environ.get("TAVILY_API_KEY") is not None
+PLACES_SERVICE = "google"  # can be foursquare or google
 GMAIL_ENABLED = True
 
 # Main LLM model used for decision-making tasks
@@ -41,7 +42,7 @@ MAIN_LLM_MODEL = {
 
 # Sub LLM model used for small, direct tasks
 SUB_LLM_MODEL = {
-    "type": "llama",
+    "type": "llama",  # can be bedrock, deepseek, openai, cohere, llama
     "config": {
         "model": "llama3.2",
         "temperature": 0,

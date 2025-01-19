@@ -1,8 +1,10 @@
 import os
 import tempfile
 from datetime import datetime
-from typing import List
-from urllib.parse import urlparse, parse_qs
+from enum import Enum
+from math import radians, sin, cos, atan2, sqrt
+from typing import List, Type, Optional
+from urllib.parse import urlparse, parse_qs, quote, urlencode
 
 import requests
 import yt_dlp
@@ -15,6 +17,7 @@ from langchain_community.document_loaders import (
 )
 from langchain_community.tools import TavilySearchResults
 from langchain_core.documents import Document
+from langchain_core.tools import BaseTool
 from langchain_google_community.gmail.create_draft import GmailCreateDraft
 from langchain_google_community.gmail.send_message import GmailSendMessage
 
@@ -35,11 +38,15 @@ from config import (
     MAIN_LLM_MODEL,
     TAVILY_ENABLED,
     GMAIL_ENABLED,
+    PLACES_SERVICE,
 )
 from llm.agents.gmail_newsletter_agent import GmailThreadSummarizer
 from llm.utils import create_llm
 from utils.db import insert_doc, load_documents_from_db, is_doc_exist
 from utils.indexing import get_indexer_instance
+
+
+llm = create_llm(model=SUB_LLM_MODEL)
 
 
 class SummarizeTextSchema(BaseModel):
@@ -159,7 +166,7 @@ def summarize_text(text: str, additional_summarize_prompt: str = None):
         Text to summarize:
         {text}"""
 
-    keywords = create_llm(model=SUB_LLM_MODEL).predict(prompt)
+    keywords = llm.predict(prompt)
     return keywords.strip()
 
 
@@ -262,7 +269,7 @@ def extract_keywords(content: str) -> str:
     Extract keywords from a text and return a comma-separated values of keywords
     """
     prompt = f"Extract important keywords or topics from the following text as comma-separate values:\n\n{content}"
-    keywords = create_llm(model=SUB_LLM_MODEL).predict(prompt)
+    keywords = llm.predict(prompt)
     return keywords.strip()
 
 
@@ -326,6 +333,7 @@ def print_system_config():
         "SERVICES_ENABLED": {
             "TAVILY_ENABLED": TAVILY_ENABLED,
             "GMAIL_ENABLED": GMAIL_ENABLED,
+            "PLACES_SERVICE": PLACES_SERVICE,
             "LANGSMITH_ENABLED": os.environ.get("LANGCHAIN_TRACING_V2"),
         },
     }
@@ -495,6 +503,356 @@ def query_articles_tool(
     ]
 
 
+class FoursquareSearchToolInput(BaseModel):
+    query: str = Field(description="Search query, e.g., 'coffee shops'")
+    ll: str = Field(
+        description="The latitude/longitude around which to retrieve place information. This must be specified as latitude,longitude (e.g., ll=41.8781,-87.6298)."
+    )
+    radius: int = Field(description="Radius in meters to search", default=5000)
+    categories: str = Field(
+        description="The Foursquare category ID in comma-separated values to search in",
+        default=None,
+    )
+    max_results: int = Field(description="Maximum results to search in", default=10)
+
+
+class FoursquareSearchTool(BaseTool):
+    name: str = "places_search"
+    description: str = (
+        "Use this tool to search for places using Foursquare API. "
+        "Provide a search query (e.g., 'coffee shops'), a city name and optionally a Foursquare category."
+    )
+    args_schema: Type[BaseModel] = FoursquareSearchToolInput
+
+    def _run(
+        self,
+        query: str,
+        ll: str,
+        radius: int = 5000,
+        categories: str = None,
+        max_results: int = 10,
+    ):
+        """
+        Executes a search on the Foursquare Places API.
+        """
+        try:
+            url = "https://api.foursquare.com/v3/places/search"
+            headers = {"Authorization": f"{self.metadata['api_key']}"}
+            params = {
+                "query": query,
+                "ll": ll,
+                "radius": radius,
+                "limit": max_results,
+                "fields": ",".join(
+                    [
+                        "fsq_id",
+                        "name",
+                        "geocodes",
+                        "location",
+                        "categories",
+                        "chains",
+                        "related_places",
+                        "distance",
+                        "closed_bucket",
+                        "description",
+                        "tel",
+                        "website",
+                        "hours",
+                        "rating",
+                        "popularity",
+                        "price",
+                        "menu",
+                        "tastes",
+                        "features",
+                    ]
+                ),
+            }
+            if categories:
+                params["categories"] = categories
+            response = requests.get(url, headers=headers, params=params)
+            response.raise_for_status()
+            data = response.json()
+
+            results = data.get("results", [])
+            return [
+                {
+                    "id": result["fsq_id"],
+                    "foursquare_url": f"https://foursquare.com/v/{result['fsq_id']}",
+                    "categories": result["categories"],
+                    "distance": result["distance"],
+                    "geocodes": result["geocodes"],
+                    "location": result["location"],
+                    "name": result["name"],
+                    "related_places": result["related_places"],
+                    "is_open": result["closed_bucket"],
+                    "description": result.get("description", None),
+                    "tel": result.get("tel", None),
+                    "website": result.get("website", None),
+                    "hours": result.get("hours", None),
+                    "rating": result.get("rating", None),
+                    "popularity": result.get("popularity", None),
+                    "price": result.get("price", None),
+                    "menu": result.get("menu", None),
+                    "tastes": result.get("tastes", []),
+                    "features": result.get("features", []),
+                }
+                for result in results
+            ]
+
+        except requests.exceptions.RequestException as e:
+            return f"API request failed: {e}"
+
+    def _arun(self, query: str, city: str):
+        """
+        Asynchronous version is not implemented.
+        """
+        raise NotImplementedError("This tool does not support async execution.")
+
+
+class GooglePlacesSearchToolInput(BaseModel):
+    location: str = Field(
+        ...,
+        description="Location in 'latitude,longitude' format, e.g., '37.7749,-122.4194'.",
+    )
+    radius: int = Field(..., description="Search radius in meters, e.g., 1000.")
+    query: str = Field(
+        ...,
+        description="Type of places to search, e.g., 'restaurants', 'shopping', 'museums'.",
+    )
+
+
+def calculate_distance(lat1, lng1, lat2, lng2):
+    """
+    Calculate the distance in meters between two coordinates using the Haversine formula.
+    """
+    R = 6371000  # Radius of the Earth in meters
+    dlat = radians(lat2 - lat1)
+    dlng = radians(lng2 - lng1)
+    a = (
+        sin(dlat / 2) ** 2
+        + cos(radians(lat1)) * cos(radians(lat2)) * sin(dlng / 2) ** 2
+    )
+    c = 2 * atan2(sqrt(a), sqrt(1 - a))
+    return round(R * c, 2)
+
+
+class GooglePlacesSearchTool(BaseTool):
+    name: str = "places_search"
+    description: str = (
+        "A tool to search for places around a specific location using the Google Maps Places API. "
+        "Provide the location (latitude and longitude), search radius in meters, and a query such as 'restaurants', 'shopping', or 'museums'."
+    )
+    args_schema: Type[BaseModel] = GooglePlacesSearchToolInput
+
+    def _run(self, location: str, radius: int, query: str):
+        """
+        Executes a search on the Google Places API.
+        """
+        try:
+            url = "https://maps.googleapis.com/maps/api/place/nearbysearch/json"
+            place_photo_url = "https://maps.googleapis.com/maps/api/place/photo"
+            params = {
+                "location": location,
+                "radius": radius,
+                "keyword": query,
+                "key": self.metadata["api_key"],
+            }
+
+            response = requests.get(url, params=params)
+            response.raise_for_status()
+            data = response.json()
+
+            user_lat, user_lng = map(float, location.split(","))
+
+            # Parse and format results
+            for place in data["results"]:
+                lat = place["geometry"]["location"]["lat"]
+                lng = place["geometry"]["location"]["lng"]
+                place["distance"] = calculate_distance(user_lat, user_lng, lat, lng)
+                place["link"] = (
+                    f"https://www.google.com/maps/place/?q=place_id:{place['place_id']}"
+                )
+                if "photos" in place:
+                    place["photos"] = [
+                        f"{place_photo_url}?maxwidth=400&photoreference={photo['photo_reference']}&key={self.metadata['api_key']}"
+                        for photo in place["photos"]
+                    ]
+
+            return data["results"]
+
+        except requests.exceptions.RequestException as e:
+            return f"API request failed: {e}"
+
+    def _arun(self, location: str, radius: int, query: str):
+        """
+        Asynchronous version is not implemented.
+        """
+        raise NotImplementedError("This tool does not support async execution.")
+
+
+class TravelMode(Enum):
+    DRIVING = "driving"
+    WALKING = "walking"
+    BICYCLING = "bicycling"
+    TRANSIT = "transit"
+
+
+class GoogleRouteToolInput(BaseModel):
+    origin: str = Field(
+        ...,
+        description="The origin location, in plain text addresses or 'latitude,longitude' format, e.g., '37.7749,-122.4194'.",
+    )
+    destination: str = Field(
+        ...,
+        description="The destination, in plain text addresses or 'latitude,longitude' format, e.g., '37.7749,-122.4194'.",
+    )
+    travel_mode: TravelMode = Field(
+        TravelMode.TRANSIT,
+        description="The mode of travel, default is transit (public transport). Note that transit mode in Japan is not available.",
+    )
+    waypoints: List[str] = Field([], description="List of stops along the way")
+    arrival_time: Optional[datetime] = Field(
+        None, description="Desired arrival time (cannot be used with departure_time)."
+    )
+    departure_time: Optional[datetime] = Field(
+        None, description="Desired departure time (cannot be used with arrival_time)."
+    )
+
+
+class GoogleRouteTool(BaseTool):
+    name: str = "route_search"
+    description: str = (
+        "A tool to get a route between two locations using Google Maps APIs. "
+        "It provides a textual description of the route, the travel time, an image showing the route on a map, "
+        "and a link to open the directions in Google Maps. You can specify the travel mode: 'driving', 'walking', "
+        "'bicycling', or 'transit' (for public transport, such as train or bus)."
+        "Note that for transit mode in Japan is not available"
+    )
+    args_schema: Type[BaseModel] = GoogleRouteToolInput
+
+    def _run(
+        self,
+        origin: str,
+        destination: str,
+        travel_mode: TravelMode = TravelMode.TRANSIT,
+        waypoints: List[str] = [],
+        departure_time: Optional[datetime] = None,
+        arrival_time: Optional[datetime] = None,
+    ):
+        """
+        Retrieves a route between two locations using Google Directions API and generates a map image using Google Static Maps API.
+        """
+        if arrival_time and departure_time:
+            raise ValueError(
+                "Only one of 'arrival_time' or 'departure_time' can be specified."
+            )
+
+        try:
+            # Define API endpoints
+            directions_url = "https://maps.googleapis.com/maps/api/directions/json"
+
+            # Step 1: Get route details from Directions API
+            directions_params = {
+                "origin": origin,
+                "destination": destination,
+                "mode": travel_mode.value,
+                "key": self.metadata["api_key"],
+            }
+            if waypoints:
+                directions_params["waypoints"] = "|".join(waypoints)
+            if arrival_time:
+                directions_params["arrival_time"] = int(arrival_time.timestamp())
+            if departure_time:
+                directions_params["departure_time"] = int(departure_time.timestamp())
+            response = requests.get(directions_url, params=directions_params)
+            response.raise_for_status()
+            data = response.json()
+
+            if data["status"] != "OK":
+                return f"Error fetching directions: {data}"
+
+            # Extract route details
+            route = data["routes"][0]
+            legs = route["legs"]
+
+            total_duration = sum(leg["duration"]["value"] for leg in legs) // 60
+
+            # Step 2: Generate a map image using Static Maps API
+            path = "|".join(
+                f"{step['start_location']['lat']},{step['start_location']['lng']}"
+                for leg in legs
+                for step in leg["steps"]
+            )
+            static_map_image_url = self._create_google_maps_image(path)
+            google_maps_link = self._create_google_maps_link(
+                origin,
+                destination,
+                waypoints,
+                travel_mode,
+                arrival_time,
+                departure_time,
+            )
+
+            # Compile response
+            return {
+                "route_details": {
+                    "total_travel_time": total_duration,
+                    "route": route,
+                },
+                "map_image": static_map_image_url,
+                "google_maps_link": google_maps_link,
+            }
+
+        except requests.exceptions.RequestException as e:
+            return f"API request failed: {e}"
+
+    def _create_google_maps_link(
+        self,
+        origin: str,
+        destination: str,
+        stops: Optional[List[str]],
+        travel_mode: TravelMode,
+        arrival_time: Optional[datetime],
+        departure_time: Optional[datetime],
+    ) -> str:
+        """Create a clickable Google Maps link."""
+        base_url = "https://www.google.com/maps/dir/?"
+        query_params = {
+            "api": 1,
+            "origin": origin,
+            "destination": destination,
+            "travelmode": travel_mode.value,
+        }
+
+        # Include waypoints if provided
+        if stops:
+            waypoints = "|".join([quote(stop) for stop in stops])
+            query_params["waypoints"] = waypoints
+
+        # Include time if provided
+        if arrival_time:
+            query_params["arrival_time"] = int(arrival_time.timestamp())
+        elif departure_time:
+            query_params["departure_time"] = int(departure_time.timestamp())
+
+        return f"{base_url}{urlencode(query_params)}"
+
+    def _create_google_maps_image(self, path: str):
+        static_map_url = "https://maps.googleapis.com/maps/api/staticmap"
+        static_map_params = {
+            "size": "600x400",  # Adjust as needed
+            "path": f"color:blue|weight:5|{path}",
+            "key": self.metadata["api_key"],
+        }
+        return f"{static_map_url}?{requests.compat.urlencode(static_map_params)}"
+
+    def _arun(self, origin: str, destination: str):
+        """
+        Asynchronous version is not implemented.
+        """
+        raise NotImplementedError("This tool does not support async execution.")
+
+
 TOOLS = [
     # summarize_text,
     search_for_research_paper,
@@ -528,6 +886,31 @@ if GMAIL_ENABLED:
         GmailSendMessage(api_resource=gmail_toolkit.api_resource),
         GmailCreateDraft(api_resource=gmail_toolkit.api_resource),
     ]
+
+if PLACES_SERVICE == "foursquare":
+    TOOLS.append(
+        FoursquareSearchTool(
+            metadata={
+                "api_key": os.environ.get("FOURSQUARE_API_KEY"),
+            }
+        )
+    )
+elif PLACES_SERVICE == "google":
+    TOOLS.append(
+        GooglePlacesSearchTool(
+            metadata={
+                "api_key": os.environ.get("GOOGLE_CLOUD_API_KEY"),
+            }
+        )
+    )
+    TOOLS.append(
+        GoogleRouteTool(
+            metadata={
+                "api_key": os.environ.get("GOOGLE_CLOUD_API_KEY"),
+                "navitime_api_key": os.environ.get("NAVITIME_API_KEY"),
+            }
+        )
+    )
 
 ADMIN_TOOLS = [
     fetch_rss,
