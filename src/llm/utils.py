@@ -1,7 +1,6 @@
 import logging
 import os
-from datetime import datetime, timedelta
-from enum import Enum
+import time
 
 from langchain_aws import ChatBedrockConverse
 from langchain_cohere import ChatCohere
@@ -11,6 +10,10 @@ from langchain_openai import ChatOpenAI
 
 
 def create_llm(model):
+    return CachedLLMDelegate(model)
+
+
+def _create_llm(model):
     logging.info(f"Creating new model {model}")
     if model["type"] == "deepseek":
         return ChatOpenAI(
@@ -34,53 +37,40 @@ def create_embeddings():
     return HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
 
 
-def get_week_days(today=datetime.today()):
-    start_of_week = today - timedelta(days=today.weekday())  # Monday
-    end_of_week = start_of_week + timedelta(days=6)  # Sunday
-    return {
-        "first_day": str(start_of_week.date()),
-        "last_day": str(end_of_week.date()),
-    }
+class CachedLLMDelegate:
+    """
+    A delegate LLM instance that caches the actual LLM for 30 minutes.
+    If accessed after the cache expires, it refreshes the LLM instance.
+    """
 
+    def __init__(self, model, cache_duration_seconds=1800):
+        """
+        Args:
+            model: The LLM model config
+            cache_duration_seconds (int): The cache duration in seconds (default: 1800 seconds = 30 minutes).
+        """
+        self.model = model
+        self.cache_duration_seconds = cache_duration_seconds
+        self._cached_llm = None
+        self._cache_timestamp = None
 
-def get_month_days(today=datetime.today()):
-    first_day = today.replace(day=1)  # First day of the month
-    # Calculate the last day of the month
-    next_month = today.replace(day=28) + timedelta(
-        days=4
-    )  # Guaranteed to be in the next month
-    last_day = next_month.replace(day=1) - timedelta(
-        days=1
-    )  # Last day of the current month
-    return {
-        "first_day": str(first_day.date()),
-        "last_day": str(last_day.date()),
-    }
+    def _get_cached_llm(self):
+        """Returns the cached LLM instance, refreshing it if necessary."""
+        if (
+            self._cached_llm is None
+            or self._cache_timestamp is None
+            or (time.time() - self._cache_timestamp) > self.cache_duration_seconds
+        ):
+            logging.info(f"Refreshing LLM model: {self.model}")
+            self._cached_llm = _create_llm(self.model)
+            self._cache_timestamp = time.time()
+        return self._cached_llm
 
+    def __getattr__(self, name):
+        """
+        Delegate attribute access to the wrapped instance.
 
-def get_year_days(today=datetime.today()):
-    first_day = today.replace(month=1, day=1)  # January 1st
-    last_day = today.replace(month=12, day=31)  # December 31st
-    return {
-        "first_day": str(first_day.date()),
-        "last_day": str(last_day.date()),
-    }
-
-
-class DateRange(Enum):
-    DAY = "day"
-    WEEK = "week"
-    MONTH = "month"
-    YEAR = "year"
-
-
-def get_days(date_range: DateRange, today=datetime.now()):
-    if date_range == DateRange.DAY:
-        num_days = 1
-    elif date_range == DateRange.WEEK:
-        num_days = 7
-    elif date_range == DateRange.MONTH:
-        num_days = 30
-    else:
-        num_days = 365
-    return today - timedelta(days=num_days)
+        :param name: The name of the attribute.
+        :return: The attribute from the wrapped instance.
+        """
+        return getattr(self._get_cached_llm(), name)

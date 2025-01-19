@@ -10,6 +10,9 @@ from pydantic import BaseModel, Field
 from config import SUB_LLM_MODEL, AGENT_LANGUAGE, BOT_NAME, AGENT_PERSONALITY
 from llm.utils import create_llm
 
+
+llm = create_llm(SUB_LLM_MODEL)
+
 EMAIL_SUMMARIZER_PROMPT = PromptTemplate(
     input_variables=["content"],
     template="""
@@ -59,7 +62,6 @@ class GmailThreadSummarizer(BaseTool):
         if not message_content:
             return "No content to summarize."
 
-        llm = create_llm(SUB_LLM_MODEL)
         the_chain = EMAIL_SUMMARIZER_PROMPT | llm | StrOutputParser()
         return the_chain.invoke({"content": message_content})
 
