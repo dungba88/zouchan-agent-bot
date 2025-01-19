@@ -95,6 +95,9 @@
             font-size: 1.64rem;
         }
         #responseContent img {
+            display: block;
+        }
+        #responseContent img.avatar {
             width: 25px;
             float: left;
             margin-right: 5px;
@@ -476,9 +479,9 @@
         }
         let content = "";
         if (message['type'] !== 'human') {
-            content += `<img alt="${message['type']}" src="resources/img/${avatar}.png"/><strong>${message['type']}</strong>`;
+            content += `<img class="avatar" alt="${message['type']}" src="resources/img/${avatar}.png"/><strong>${message['type']}</strong>`;
         } else {
-            content += `<img alt="${message['type']}" src="resources/img/${avatar}.png"/><strong>${existingUser}</strong>`;
+            content += `<img class="avatar" alt="${message['type']}" src="resources/img/${avatar}.png"/><strong>${existingUser}</strong>`;
         }
         if (message['type'] !== 'tool' && message['data']['content']) {
             if (markdown) {
