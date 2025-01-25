@@ -625,6 +625,7 @@ class GooglePlacesSearchToolInput(BaseModel):
         ...,
         description="Type of places to search, e.g., 'restaurants', 'shopping', 'museums'.",
     )
+    open_now: bool = Field(..., description="Whether to only show places currently open")
 
 
 def calculate_distance(lat1, lng1, lat2, lng2):
@@ -650,7 +651,7 @@ class GooglePlacesSearchTool(BaseTool):
     )
     args_schema: Type[BaseModel] = GooglePlacesSearchToolInput
 
-    def _run(self, location: str, radius: int, query: str):
+    def _run(self, location: str, radius: int, query: str, open_now: bool):
         """
         Executes a search on the Google Places API.
         """
@@ -662,6 +663,7 @@ class GooglePlacesSearchTool(BaseTool):
                 "radius": radius,
                 "keyword": query,
                 "key": self.metadata["api_key"],
+                "opennow": open_now,
             }
 
             response = requests.get(url, params=params)

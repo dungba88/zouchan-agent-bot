@@ -31,5 +31,5 @@ class ResearchAssistantAgent:
             "extract_keywords",
             "load_webpage",
             "send_gmail_message",
-            "tavily_search_tool",
+            "tavily_search_results_json",
         ]
