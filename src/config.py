@@ -37,7 +37,7 @@ MAIN_LLM_MODEL = {
 
 # Sub LLM model used for small, direct tasks
 SUB_LLM_MODEL = {
-    "type": "llama",  # can be bedrock, deepseek, openai, cohere, llama
+    "type": "openai",  # can be bedrock, deepseek, openai, cohere, llama
     "config": {
         "model": "gpt-4o-mini",
         "temperature": 0,
