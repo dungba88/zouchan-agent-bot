@@ -859,66 +859,71 @@ class GoogleRouteTool(BaseTool):
         raise NotImplementedError("This tool does not support async execution.")
 
 
-TOOLS = [
-    # summarize_text,
-    search_for_research_paper,
-    get_channel_video_list,
-    extract_yt_transcript,
-    summarize_yt_transcript,
-    extract_keywords,
-    load_webpage,
-    query_articles_tool,
-    get_weather,
-    fetch_rss,
-    reindex,
-    print_system_config,
-]
-if TAVILY_ENABLED:
-    tavily_search_tool = TavilySearchResults(
-        max_results=10,
-        search_depth="advanced",
-        include_answer=True,
-        include_raw_content=False,
-        include_images=True,
-        # include_domains=[...],
-        # exclude_domains=[...],
-        # name="...",            # overwrite default tool name
-        # description="...",     # overwrite default tool description
-        # args_schema=...,       # overwrite default args_schema: BaseModel
-    )
-    TOOLS.append(tavily_search_tool)
-
-if GMAIL_ENABLED:
-    gmail_toolkit = GmailToolkit()
-    TOOLS += [
-        GmailThreadSummarizer(),
-        GmailSendMessage(api_resource=gmail_toolkit.api_resource),
-        GmailCreateDraft(api_resource=gmail_toolkit.api_resource),
+def initialize_tools():
+    tools = [
+        # summarize_text,
+        search_for_research_paper,
+        get_channel_video_list,
+        extract_yt_transcript,
+        summarize_yt_transcript,
+        extract_keywords,
+        load_webpage,
+        query_articles_tool,
+        get_weather,
+        fetch_rss,
+        reindex,
+        print_system_config,
     ]
+    if TAVILY_ENABLED:
+        tavily_search_tool = TavilySearchResults(
+            max_results=10,
+            search_depth="advanced",
+            include_answer=True,
+            include_raw_content=False,
+            include_images=True,
+            # include_domains=[...],
+            # exclude_domains=[...],
+            # name="...",            # overwrite default tool name
+            # description="...",     # overwrite default tool description
+            # args_schema=...,       # overwrite default args_schema: BaseModel
+        )
+        tools.append(tavily_search_tool)
 
-if PLACES_SERVICE == "foursquare":
-    TOOLS.append(
-        FoursquareSearchTool(
-            metadata={
-                "api_key": os.environ.get("FOURSQUARE_API_KEY"),
-            }
+    if GMAIL_ENABLED:
+        gmail_toolkit = GmailToolkit()
+        tools += [
+            GmailThreadSummarizer(),
+            GmailSendMessage(api_resource=gmail_toolkit.api_resource),
+            GmailCreateDraft(api_resource=gmail_toolkit.api_resource),
+        ]
+
+    if PLACES_SERVICE == "foursquare":
+        tools.append(
+            FoursquareSearchTool(
+                metadata={
+                    "api_key": os.environ.get("FOURSQUARE_API_KEY"),
+                }
+            )
         )
-    )
-elif PLACES_SERVICE == "google":
-    TOOLS.append(
-        GooglePlacesSearchTool(
-            metadata={
-                "api_key": os.environ.get("GOOGLE_CLOUD_API_KEY"),
-            }
+    elif PLACES_SERVICE == "google":
+        tools.append(
+            GooglePlacesSearchTool(
+                metadata={
+                    "api_key": os.environ.get("GOOGLE_CLOUD_API_KEY"),
+                }
+            )
         )
-    )
-    TOOLS.append(
-        GoogleRouteTool(
-            metadata={
-                "api_key": os.environ.get("GOOGLE_CLOUD_API_KEY"),
-                "navitime_api_key": os.environ.get("NAVITIME_API_KEY"),
-            }
+        tools.append(
+            GoogleRouteTool(
+                metadata={
+                    "api_key": os.environ.get("GOOGLE_CLOUD_API_KEY"),
+                    "navitime_api_key": os.environ.get("NAVITIME_API_KEY"),
+                }
+            )
         )
-    )
+    return tools
+
+
+TOOLS = initialize_tools()
 
 TOOL_MAPPINGS = {tool.name: tool for tool in TOOLS}
