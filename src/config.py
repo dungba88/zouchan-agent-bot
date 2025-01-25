@@ -17,17 +17,11 @@ BOT_NAME = "Zou-chan"
 # Additional prompt request
 AGENT_PERSONALITY = "helpful and caring assistant"
 
-# Define Agent prompt template
-PROMPT_TEMPLATE = f"""You are {BOT_NAME}, a {AGENT_PERSONALITY} that responds only in {AGENT_LANGUAGE}, \
-unless the prompt specially ask for another language.
-When responding, use natural and human-friendly language.
-Return the response in expressive markdown format.
-"""
-
 # Whether to enable short-term memory
 USE_SHORT_TERM_MEMORY = True
 
 TAVILY_ENABLED = os.environ.get("TAVILY_API_KEY") is not None
+PLACES_SERVICE = "google"  # can be foursquare or google
 GMAIL_ENABLED = True
 
 # Main LLM model used for decision-making tasks
@@ -41,7 +35,7 @@ MAIN_LLM_MODEL = {
 
 # Sub LLM model used for small, direct tasks
 SUB_LLM_MODEL = {
-    "type": "llama",
+    "type": "llama",  # can be bedrock, deepseek, openai, cohere, llama
     "config": {
         "model": "llama3.2",
         "temperature": 0,

@@ -4,7 +4,7 @@ from llm.agents.articles_newsletter_agent import ArticlesNewsletterAgent
 from llm.agents.gmail_newsletter_agent import GmailNewsletterAgent
 from llm.agents.playground_agent import PlaygroundAgent
 from llm.agents.research_assistant_agent import ResearchAssistantAgent
-from llm.agents.weather_assistant_agent import WeatherAssistantAgent
+from llm.agents.travel_assistant_agent import TravelAssistantAgent
 
 
 def create_agents():
@@ -13,7 +13,7 @@ def create_agents():
         "research_assistant_agent": ResearchAssistantAgent(),
         "articles_newsletter_agent": ArticlesNewsletterAgent(),
         "gmail_newsletter_agent": GmailNewsletterAgent(),
-        "weather_assistant_agent": WeatherAssistantAgent(),
+        "travel_assistant_agent": TravelAssistantAgent(),
         "admin_agent": AdminAgent(),
     }
     return {
