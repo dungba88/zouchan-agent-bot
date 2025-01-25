@@ -55,9 +55,13 @@ def handle_text_messages(agent: ReactAgent, user_id, messages):
     # TODO: Use conversation summary instead
     thread_id = f"{user_id}/line/{datetime.today().strftime("%Y-%m-%d")}"
 
+    prompt = f"""Output in plaintext format that LINE messaging platform can display.
+    Prompt: {user_message}
+    """
+
     # Get the response from the LangChain agent
     try:
-        agent_response = agent.invoke(user_message, thread_id)
+        agent_response = agent.invoke(prompt, thread_id)
 
         # Send the response back to the user
         send_line_message(user_id, agent_response["output"])
