@@ -1,9 +1,12 @@
 import logging
 import os
 import time
+from typing import Optional, Any
 
 from langchain_aws import ChatBedrockConverse
 from langchain_cohere import ChatCohere
+from langchain_core.runnables import Runnable, RunnableConfig
+from langchain_core.runnables.utils import Input, Output
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_ollama import ChatOllama
 from langchain_openai import ChatOpenAI
@@ -37,7 +40,7 @@ def create_embeddings():
     return HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
 
 
-class CachedLLMDelegate:
+class CachedLLMDelegate(Runnable):
     """
     A delegate LLM instance that caches the actual LLM for 30 minutes.
     If accessed after the cache expires, it refreshes the LLM instance.
@@ -53,6 +56,9 @@ class CachedLLMDelegate:
         self.cache_duration_seconds = cache_duration_seconds
         self._cached_llm = None
         self._cache_timestamp = None
+
+    def invoke(self, input: Input, config: Optional[RunnableConfig] = None, **kwargs: Any) -> Output:
+        return self._get_cached_llm().invoke(input, config, **kwargs)
 
     def _get_cached_llm(self):
         """Returns the cached LLM instance, refreshing it if necessary."""
