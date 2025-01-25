@@ -19,7 +19,7 @@ app = Flask(__name__)
 agents = create_agents()
 logging.info(f"Agents created: {agents.keys()}")
 
-cron = CronService()
+cron = CronService(agents)
 cron.run()
 logging.info("Started cron service")
 
@@ -74,4 +74,4 @@ def serve_static_resource(filename):
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5050, debug=True)
+    app.run(host="0.0.0.0", port=8080, debug=True)

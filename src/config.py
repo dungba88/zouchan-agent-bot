@@ -22,7 +22,7 @@ USE_SHORT_TERM_MEMORY = True
 
 TAVILY_ENABLED = os.environ.get("TAVILY_API_KEY") is not None
 PLACES_SERVICE = "google"  # can be foursquare or google
-GMAIL_ENABLED = True
+GMAIL_ENABLED = False
 
 # Main LLM model used for decision-making tasks
 MAIN_LLM_MODEL = {
@@ -37,7 +37,7 @@ MAIN_LLM_MODEL = {
 SUB_LLM_MODEL = {
     "type": "llama",  # can be bedrock, deepseek, openai, cohere, llama
     "config": {
-        "model": "llama3.2",
+        "model": "gpt-4o-mini",
         "temperature": 0,
     },
 }

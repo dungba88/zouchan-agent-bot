@@ -40,6 +40,7 @@ from config import (
     PLACES_SERVICE,
 )
 from llm.agents.gmail_newsletter_agent import GmailThreadSummarizer
+from llm.agents.utils import AGENT_CONFIGS
 from llm.utils import create_llm
 from utils.db import insert_doc, load_documents_from_db, is_doc_exist
 from utils.indexing import get_indexer_instance
@@ -325,15 +326,19 @@ def print_system_config():
             "MAIN_LLM": MAIN_LLM_MODEL,
             "SUB_LLM": SUB_LLM_MODEL,
         },
-        "BOT_NAME": BOT_NAME,
-        "AGENT_LANGUAGE": AGENT_LANGUAGE,
-        "AGENT_PERSONALITY": AGENT_PERSONALITY,
+        "AGENT_MAIN_CONFIG": {
+            "BOT_NAME": BOT_NAME,
+            "AGENT_LANGUAGE": AGENT_LANGUAGE,
+            "AGENT_PERSONALITY": AGENT_PERSONALITY,
+        },
         "SERVICES_ENABLED": {
             "TAVILY_ENABLED": TAVILY_ENABLED,
             "GMAIL_ENABLED": GMAIL_ENABLED,
             "PLACES_SERVICE": PLACES_SERVICE,
             "LANGSMITH_ENABLED": os.environ.get("LANGCHAIN_TRACING_V2"),
         },
+        "AVAILABLE_AGENTS": AGENT_CONFIGS,
+        "AVAILABLE_TOOLS": TOOLS,
     }
 
 
@@ -428,6 +433,11 @@ def get_weather(lat: float, lon: float):
         "showers",
         "apparent_temperature",
         "wind_speed_10m",
+        "cloud_cover",
+        "cloud_cover_low",
+        "cloud_cover_mid",
+        "cloud_cover_high",
+        "weather_code",
     ]
     daily_params = [
         "temperature_2m_max",
@@ -861,6 +871,9 @@ TOOLS = [
     load_webpage,
     query_articles_tool,
     get_weather,
+    fetch_rss,
+    reindex,
+    print_system_config,
 ]
 if TAVILY_ENABLED:
     tavily_search_tool = TavilySearchResults(
@@ -910,10 +923,4 @@ elif PLACES_SERVICE == "google":
         )
     )
 
-ADMIN_TOOLS = [
-    fetch_rss,
-    reindex,
-    print_system_config,
-]
-
-TOOL_MAPPINGS = {tool.name: tool for tool in TOOLS + ADMIN_TOOLS}
+TOOL_MAPPINGS = {tool.name: tool for tool in TOOLS}

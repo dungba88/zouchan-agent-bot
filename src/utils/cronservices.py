@@ -12,8 +12,9 @@ from config import CRON_PATH
 
 class CronService:
 
-    def __init__(self):
+    def __init__(self, agents):
         self.crons = self._parse_all_crons()
+        self.agents = agents
 
     def _parse_all_crons(self):
         parsed_crons = []
@@ -35,13 +36,12 @@ class CronService:
         # Open the file and read lines
         with open(file_path, "r") as file:
             obj = json.load(file)
-            # validate_chain(obj["chain"])
 
             return {
                 "schedule": obj["schedule"],
                 "name": file_path,
-                "chain": obj["chain"],
-                "input": obj["input"],
+                "agent": obj["agent"],
+                "prompt": "\n".join(obj["prompt"]),
             }
 
     def run(self):
@@ -54,8 +54,7 @@ class CronService:
             )
             thread.start()
 
-    @staticmethod
-    def _schedule_task(config):
+    def _schedule_task(self, config):
         cron = croniter(config["schedule"], datetime.now())
 
         # Calculate the next run time
@@ -72,7 +71,7 @@ class CronService:
             # Check if it's time to run the task
             if current_time >= next_run_time:
                 logging.info(f"Executing chain {config['name']}")
-                # run_chain(config["chain"], config["input"])
+                self.agents[config["agent"]].invoke(config["prompt"])
 
                 # Calculate the next run time
                 next_run_time = cron.get_next(datetime)
