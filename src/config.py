@@ -24,6 +24,8 @@ TAVILY_ENABLED = os.environ.get("TAVILY_API_KEY") is not None
 PLACES_SERVICE = "google"  # can be foursquare or google
 GMAIL_ENABLED = False
 
+LINE_AGENT = "travel_assistant_agent"
+
 # Main LLM model used for decision-making tasks
 MAIN_LLM_MODEL = {
     "type": "openai",  # can be bedrock, deepseek, openai, cohere, llama

@@ -57,7 +57,9 @@ class CachedLLMDelegate(Runnable):
         self._cached_llm = None
         self._cache_timestamp = None
 
-    def invoke(self, input: Input, config: Optional[RunnableConfig] = None, **kwargs: Any) -> Output:
+    def invoke(
+        self, input: Input, config: Optional[RunnableConfig] = None, **kwargs: Any
+    ) -> Output:
         return self._get_cached_llm().invoke(input, config, **kwargs)
 
     def _get_cached_llm(self):

@@ -7,11 +7,12 @@ setup_logging()
 import os
 import logging
 
-from config import STATIC_RESOURCES_PATH, BOT_NAME
+from config import STATIC_RESOURCES_PATH, BOT_NAME, LINE_AGENT
 from flask import Flask, request, jsonify, render_template, abort, send_from_directory
 
 from llm.agents.utils import create_agents
 from utils.cronservices import CronService
+from webhooks import line
 
 
 app = Flask(__name__)
@@ -45,12 +46,6 @@ def register():
     return render_template("register.html", bot_name=BOT_NAME)
 
 
-# Route to render the HTML page
-@app.route("/test")
-def test():
-    return render_template("test.html", bot_name=BOT_NAME)
-
-
 @app.route("/resources/<path:filename>", methods=["GET"])
 def serve_static_resource(filename):
     """
@@ -71,6 +66,11 @@ def serve_static_resource(filename):
 
     # Serve the file
     return send_from_directory(STATIC_RESOURCES_PATH, filename)
+
+
+@app.route("/webhooks/line", methods=["POST"])
+def handle_line_webhook():
+    return line.handle_webhook_event(agents[LINE_AGENT])
 
 
 if __name__ == "__main__":
