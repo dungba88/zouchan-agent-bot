@@ -26,7 +26,7 @@ playwright install
 
 ## Configuration
 
-Configure your API keys for various services in `.env` file
+Rename `.env.sample` to `.env` and configure your API keys for various services in `.env` file
 
 See other configurations in `src/config.py`
 
