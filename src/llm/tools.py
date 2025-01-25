@@ -40,7 +40,6 @@ from config import (
     PLACES_SERVICE,
 )
 from llm.agents.gmail_newsletter_agent import GmailThreadSummarizer
-from llm.agents.utils import AGENT_CONFIGS
 from llm.utils import create_llm
 from utils.db import insert_doc, load_documents_from_db, is_doc_exist
 from utils.indexing import get_indexer_instance
@@ -337,7 +336,6 @@ def print_system_config():
             "PLACES_SERVICE": PLACES_SERVICE,
             "LANGSMITH_ENABLED": os.environ.get("LANGCHAIN_TRACING_V2"),
         },
-        "AVAILABLE_AGENTS": AGENT_CONFIGS,
         "AVAILABLE_TOOLS": TOOLS,
     }
 
