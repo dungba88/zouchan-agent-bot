@@ -9,7 +9,7 @@ logging.info("Environment variables loaded")
 
 
 # Define the Agent language
-AGENT_LANGUAGE = "English"
+AGENT_LANGUAGE = "the main language of the user prompt"
 
 # Define the bot name
 BOT_NAME = "Zou-chan"

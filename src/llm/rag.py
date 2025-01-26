@@ -20,7 +20,9 @@ class RagChain:
         )
 
     def invoke(self, prompt):
-        response = self.rag_chain.invoke({"input": prompt})
+        response = self.rag_chain.invoke(
+            {"input": prompt},
+        )
         return {
             "output": response["answer"],
             "context": [doc.dict() for doc in response["context"]],

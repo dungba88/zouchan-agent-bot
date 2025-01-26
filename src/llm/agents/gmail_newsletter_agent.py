@@ -110,7 +110,6 @@ class GmailNewsletterAgent:
         - The top of the newsletter should contain a short summary of all emails.
         - The newsletter should be grouped by email sender.
         - Keep the source or URL to see more details if possible
-        - Default output (unless specified by user): Markdown
         """
         self.tools = [
             "gmail_thread_summarizer",

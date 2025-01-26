@@ -1,3 +1,4 @@
+import hashlib
 import os
 import tempfile
 from datetime import datetime
@@ -8,6 +9,7 @@ from urllib.parse import urlparse, parse_qs, quote, urlencode
 
 import requests
 import yt_dlp
+from imagekitio import ImageKit
 from langchain.agents import tool
 from langchain_community.agent_toolkits import GmailToolkit
 from langchain_community.document_loaders import (
@@ -620,12 +622,15 @@ class GooglePlacesSearchToolInput(BaseModel):
         ...,
         description="Location in 'latitude,longitude' format, e.g., '37.7749,-122.4194'.",
     )
-    radius: int = Field(..., description="Search radius in meters, e.g., 1000.")
+    radius: int = Field(2000, description="Search radius in meters, e.g., 1000.")
     query: str = Field(
         ...,
         description="Type of places to search, e.g., 'restaurants', 'shopping', 'museums'.",
     )
-    open_now: bool = Field(..., description="Whether to only show places currently open")
+    open_now: bool = Field(
+        False, description="Whether to only show places currently open"
+    )
+    num_results: int = Field(5, description="Maximum number of results to return")
 
 
 def calculate_distance(lat1, lng1, lat2, lng2):
@@ -643,6 +648,16 @@ def calculate_distance(lat1, lng1, lat2, lng2):
     return round(R * c, 2)
 
 
+if os.environ.get("IMAGE_KIT_PRIVATE_KEY"):
+    IMAGE_KIT = ImageKit(
+        public_key=os.environ.get("IMAGE_KIT_PUBLIC_KEY"),
+        private_key=os.environ.get("IMAGE_KIT_PRIVATE_KEY"),
+        url_endpoint=os.environ.get("IMAGE_KIT_URL"),
+    )
+else:
+    IMAGE_KIT = None
+
+
 class GooglePlacesSearchTool(BaseTool):
     name: str = "places_search"
     description: str = (
@@ -651,13 +666,19 @@ class GooglePlacesSearchTool(BaseTool):
     )
     args_schema: Type[BaseModel] = GooglePlacesSearchToolInput
 
-    def _run(self, location: str, radius: int, query: str, open_now: bool):
+    def _run(
+        self,
+        location: str,
+        query: str,
+        radius: int = 2000,
+        open_now: bool = False,
+        num_results: int = 5,
+    ):
         """
         Executes a search on the Google Places API.
         """
         try:
             url = "https://maps.googleapis.com/maps/api/place/nearbysearch/json"
-            place_photo_url = "https://maps.googleapis.com/maps/api/place/photo"
             params = {
                 "location": location,
                 "radius": radius,
@@ -672,6 +693,8 @@ class GooglePlacesSearchTool(BaseTool):
 
             user_lat, user_lng = map(float, location.split(","))
 
+            data["results"] = data["results"][:num_results]
+
             # Parse and format results
             for place in data["results"]:
                 lat = place["geometry"]["location"]["lat"]
@@ -680,16 +703,24 @@ class GooglePlacesSearchTool(BaseTool):
                 place["link"] = (
                     f"https://www.google.com/maps/place/?q=place_id:{place['place_id']}"
                 )
-                if "photos" in place:
-                    place["photos"] = [
-                        f"{place_photo_url}?maxwidth=400&photoreference={photo['photo_reference']}&key={self.metadata['api_key']}"
-                        for photo in place["photos"]
-                    ]
+                if "photos" in place and place["photos"]:
+                    place["photos"] = [self.build_photo_url(place["photos"][0])]
 
             return data["results"]
 
         except requests.exceptions.RequestException as e:
             return f"API request failed: {e}"
+
+    def build_photo_url(self, photo):
+        place_photo_url = "https://maps.googleapis.com/maps/api/place/photo"
+        url = f"{place_photo_url}?maxwidth=400&photoreference={photo['photo_reference']}&key={self.metadata['api_key']}"
+        if IMAGE_KIT is None:
+            return url
+        response = IMAGE_KIT.upload_file(
+            file=url,
+            file_name=f"{hashlib.md5(url.encode()).hexdigest()}.jpg",
+        )
+        return response.thumbnail_url
 
     def _arun(self, location: str, radius: int, query: str):
         """

@@ -15,7 +15,6 @@ class ArticlesNewsletterAgent:
             - The newsletter should be grouped by source.
             - For each news, come up with a summary highlighting key takeaways or important information
             - Keep the original URL and published date whenever appropriate
-            - Default output (unless specified by user): Markdown
             """
         self.tools = [
             "query_articles_tool",

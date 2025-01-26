@@ -10,6 +10,7 @@ import logging
 from config import STATIC_RESOURCES_PATH, BOT_NAME, LINE_AGENT
 from flask import Flask, request, jsonify, render_template, abort, send_from_directory
 
+from llm.agent import AgentInput
 from llm.agents.utils import create_agents
 from utils.cronservices import CronService
 from webhooks import line
@@ -29,7 +30,7 @@ logging.info("Started cron service")
 def call_react_agent(agent):
     prompt = request.args.get("prompt")
     thread_id = request.args.get("thread_id")
-    response = agents[agent].invoke(prompt, thread_id)
+    response = agents[agent].invoke(AgentInput(prompt=prompt, thread_id=thread_id))
     return jsonify({"response": response, "status": "success"}), 200
 
 

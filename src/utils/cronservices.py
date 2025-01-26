@@ -8,6 +8,7 @@ import threading
 import time
 
 from config import CRON_PATH
+from llm.agent import AgentInput
 
 
 class CronService:
@@ -71,7 +72,11 @@ class CronService:
             # Check if it's time to run the task
             if current_time >= next_run_time:
                 logging.info(f"Executing chain {config['name']}")
-                self.agents[config["agent"]].invoke(config["prompt"])
+                self.agents[config["agent"]].invoke(
+                    AgentInput(
+                        prompt=config["prompt"],
+                    ),
+                )
 
                 # Calculate the next run time
                 next_run_time = cron.get_next(datetime)
