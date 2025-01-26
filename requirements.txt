@@ -22,3 +22,4 @@ lxml_html_clean
 python-dotenv
 playwright
 unstructured
+imagekitio
