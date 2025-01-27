@@ -5,6 +5,7 @@ import logging
 import os
 from datetime import datetime
 from typing import Literal, Union, Optional, List
+from urllib.parse import urlparse, parse_qs, urlencode, urlunparse, quote
 
 import requests
 from flask import jsonify, request
@@ -236,6 +237,23 @@ Image.update_forward_refs()
 Button.update_forward_refs()
 
 
+def url_encode_params(uri):
+    # Parse the URI into components
+    parsed_url = urlparse(uri)
+
+    encoded_path = quote(parsed_url.path)
+
+    # Parse the query parameters
+    query_params = parse_qs(parsed_url.query)
+
+    # URL encode each parameter value
+    encoded_query = urlencode({k: v[0] for k, v in query_params.items()})
+
+    # Rebuild the URI with the encoded parameters
+    updated_url = parsed_url._replace(path=encoded_path, query=encoded_query)
+    return urlunparse(updated_url)
+
+
 def handle_webhook_event(agent):
     channel_secret = os.environ.get("LINE_CHANNEL_SECRET")
     # Validate the X-Line-Signature header
@@ -286,7 +304,7 @@ def build_actionable_item_text(item):
                 action=Action(
                     type="uri",
                     label="View details",
-                    uri=item.url,
+                    uri=url_encode_params(item.url),
                 )
             )
         )
@@ -340,7 +358,7 @@ def build_carousel_message(actionable_contents: List[ActionableContent]):
                                 action=Action(
                                     type="uri",
                                     label="View details",
-                                    uri=item.url,
+                                    uri=url_encode_params(item.url),
                                 )
                             )
                         ],
