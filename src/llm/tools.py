@@ -19,7 +19,7 @@ from langchain_community.document_loaders import (
 )
 from langchain_community.tools import TavilySearchResults
 from langchain_core.documents import Document
-from langchain_core.tools import BaseTool
+from langchain_core.tools import BaseTool, Tool
 from langchain_google_community.gmail.create_draft import GmailCreateDraft
 from langchain_google_community.gmail.send_message import GmailSendMessage
 
@@ -892,6 +892,28 @@ class GoogleRouteTool(BaseTool):
         raise NotImplementedError("This tool does not support async execution.")
 
 
+def wrap_tavily_search(tavily_search_tool: TavilySearchResults):
+
+    def tavily_search(query):
+        return tavily_search_tool.api_wrapper.raw_results(
+            query,
+            tavily_search_tool.max_results,
+            tavily_search_tool.search_depth,
+            tavily_search_tool.include_domains,
+            tavily_search_tool.exclude_domains,
+            tavily_search_tool.include_answer,
+            tavily_search_tool.include_raw_content,
+            tavily_search_tool.include_images,
+        )
+
+    return Tool(
+        name=tavily_search_tool.name,
+        description=tavily_search_tool.description,
+        args_schema=tavily_search_tool.args_schema,
+        func=tavily_search,
+    )
+
+
 def initialize_tools():
     tools = [
         # summarize_text,
@@ -920,7 +942,7 @@ def initialize_tools():
             # description="...",     # overwrite default tool description
             # args_schema=...,       # overwrite default args_schema: BaseModel
         )
-        tools.append(tavily_search_tool)
+        tools.append(wrap_tavily_search(tavily_search_tool))
 
     if GMAIL_ENABLED:
         gmail_toolkit = GmailToolkit()

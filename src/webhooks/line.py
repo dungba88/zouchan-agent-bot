@@ -347,7 +347,7 @@ def build_carousel_message(actionable_contents: List[ActionableContent]):
                 body=Box(
                     layout="vertical",
                     contents=[
-                        Text(text=the_text) for the_text in item.text.split("\n")
+                        Text(text=the_text) for the_text in item.text.split("\n") if the_text
                     ],
                 ),
                 footer=(
