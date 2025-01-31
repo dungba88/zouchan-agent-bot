@@ -295,9 +295,9 @@ def handle_webhook_event(agent):
 
 def build_actionable_item_text(item):
     contents = [
-        Text(text=item.title, weight="bold"),
+        Text(text=item.title, weight="bold", size="lg"),
     ]
-    contents += [Text(text=the_text) for the_text in item.text.split("\n")]
+    contents += [Text(text=the_text) for the_text in item.text.split("\n") if the_text]
     if item.url:
         contents.append(
             Button(
@@ -312,15 +312,14 @@ def build_actionable_item_text(item):
 
 
 def build_actionable_item_box(item: ActionableContent):
+    contents = [Separator(margin="md")]
     if item.image_url is not None:
-        return Box(
-            layout="vertical",
-            contents=[
-                Image(url=item.image_url, size="full"),
-                build_actionable_item_text(item),
-            ],
-        )
-    return build_actionable_item_text(item)
+        contents.append(Image(url=item.image_url, size="full"))
+    contents.append(build_actionable_item_text(item))
+    return Box(
+        layout="vertical",
+        contents=contents,
+    )
 
 
 def build_bubble_message(llm_output: LineMessage):
@@ -342,7 +341,7 @@ def build_carousel_message(actionable_contents: List[ActionableContent]):
             Bubble(
                 hero=Image(url=item.image_url, size="full") if item.image_url else None,
                 header=Box(
-                    layout="horizontal", contents=[Text(text=item.title, weight="bold")]
+                    layout="horizontal", contents=[Text(text=item.title, weight="bold", size="lg")]
                 ),
                 body=Box(
                     layout="vertical",
