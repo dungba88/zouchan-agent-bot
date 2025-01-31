@@ -341,12 +341,15 @@ def build_carousel_message(actionable_contents: List[ActionableContent]):
             Bubble(
                 hero=Image(url=item.image_url, size="full") if item.image_url else None,
                 header=Box(
-                    layout="horizontal", contents=[Text(text=item.title, weight="bold", size="lg")]
+                    layout="horizontal",
+                    contents=[Text(text=item.title, weight="bold", size="lg")],
                 ),
                 body=Box(
                     layout="vertical",
                     contents=[
-                        Text(text=the_text) for the_text in item.text.split("\n") if the_text
+                        Text(text=the_text)
+                        for the_text in item.text.split("\n")
+                        if the_text
                     ],
                 ),
                 footer=(
@@ -389,13 +392,13 @@ def format_output(agent_response):
     if len(llm_output.actionable_contents) <= MAX_BUBBLE_LENGTH:
         return [
             FlexMessage(
-                altText=llm_output.text, contents=build_bubble_message(llm_output)
+                altText=llm_output.text[:400], contents=build_bubble_message(llm_output)
             )
         ]
     return [
         TextMessage(text=llm_output.text),
         FlexMessage(
-            altText=llm_output.text,
+            altText=llm_output.text[:400],
             contents=build_carousel_message(llm_output.actionable_contents),
         ),
     ]
@@ -449,3 +452,4 @@ def send_line_message(user_id, messages):
     response = requests.post(url, headers=headers, json=body)
     if response.status_code != 200:
         logging.error(f"Error sending message: {response.status_code}, {response.text}")
+        logging.error(messages)

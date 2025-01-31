@@ -739,7 +739,7 @@ class TravelMode(Enum):
 class GoogleRouteToolInput(BaseModel):
     origin: str = Field(
         ...,
-        description="The origin location, in plain text addresses or 'latitude,longitude' format, e.g., '37.7749,-122.4194'.",
+        description="The start location, in plain text addresses or 'latitude,longitude' format, e.g., '37.7749,-122.4194'.",
     )
     destination: str = Field(
         ...,
