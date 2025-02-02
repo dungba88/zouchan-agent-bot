@@ -1,6 +1,7 @@
 import hashlib
 import os
 import tempfile
+import uuid
 from datetime import datetime
 from enum import Enum
 from math import radians, sin, cos, atan2, sqrt
@@ -19,7 +20,9 @@ from langchain_community.document_loaders import (
 )
 from langchain_community.tools import TavilySearchResults
 from langchain_core.documents import Document
+from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import BaseTool, Tool
+from langchain_core.vectorstores import InMemoryVectorStore
 from langchain_google_community.gmail.create_draft import GmailCreateDraft
 from langchain_google_community.gmail.send_message import GmailSendMessage
 
@@ -42,7 +45,7 @@ from config import (
     PLACES_SERVICE,
 )
 from llm.agents.gmail_newsletter_agent import GmailThreadSummarizer
-from llm.utils import create_llm
+from llm.utils import create_llm, create_embeddings
 from utils.db import insert_doc, load_documents_from_db, is_doc_exist
 from utils.indexing import get_indexer_instance
 
@@ -624,7 +627,7 @@ class GooglePlacesSearchToolInput(BaseModel):
     )
     radius: int = Field(2000, description="Search radius in meters, e.g., 1000.")
     query: str = Field(
-        ...,
+        None,
         description="Type of places to search, e.g., 'restaurants', 'shopping', 'museums'.",
     )
     open_now: bool = Field(
@@ -669,7 +672,7 @@ class GooglePlacesSearchTool(BaseTool):
     def _run(
         self,
         location: str,
-        query: str,
+        query: str = None,
         radius: int = 2000,
         open_now: bool = False,
         num_results: int = 5,
@@ -914,6 +917,47 @@ def wrap_tavily_search(tavily_search_tool: TavilySearchResults):
     )
 
 
+recall_vector_store = InMemoryVectorStore(create_embeddings())
+
+
+def get_user_id(config: RunnableConfig) -> str:
+    # TODO: thread_id is currently passed from requests so there will be potential
+    # impersonating attack. we should properly authenticate users
+    thread_id = config["configurable"].get("thread_id")
+    if thread_id is None:
+        raise ValueError("thread_id needs to be provided to save a memory.")
+
+    return thread_id.split("/")[0]
+
+
+@tool
+def save_recall_memory(memories: List[str], config: RunnableConfig) -> List[str]:
+    """Save memory about user preferences, context to vectorstore for later semantic retrieval."""
+    user_id = get_user_id(config)
+    documents = []
+    for memory in memories:
+        document = Document(
+            page_content=memory, id=str(uuid.uuid4()), metadata={"user_id": user_id}
+        )
+        documents.append(document)
+    recall_vector_store.add_documents(documents)
+    return memories
+
+
+@tool
+def search_recall_memories(query: str, config: RunnableConfig) -> List[str]:
+    """Search for relevant memories about user preferences, contexts."""
+    user_id = get_user_id(config)
+
+    def _filter_function(doc: Document) -> bool:
+        return doc.metadata.get("user_id") == user_id
+
+    documents = recall_vector_store.similarity_search(
+        query, k=3, filter=_filter_function
+    )
+    return [document.page_content for document in documents]
+
+
 def initialize_tools():
     tools = [
         # summarize_text,
@@ -928,6 +972,8 @@ def initialize_tools():
         fetch_rss,
         reindex,
         print_system_config,
+        save_recall_memory,
+        search_recall_memories,
     ]
     if TAVILY_ENABLED:
         tavily_search_tool = TavilySearchResults(
